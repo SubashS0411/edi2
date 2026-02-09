@@ -594,65 +594,6 @@ export const generateProposalWord = async (data) => {
         }
 
         // 4.2 Chemical Dosing Systems - Detailed Format
-        sections.push(createHeading("4.2 Chemical Dosing Systems", 2));
-
-        const renderDosingDetailed = (systemName, calcData, pumpData, tankData, agitatorData) => {
-            // Header
-            sections.push(createHeading(systemName, 3)); // e.g. "Phosphoric Acid Dosing System"
-
-            // Calculations Table (if data provided)
-            if (calcData) {
-                sections.push(createParagraph("Calculations:", { textOptions: { bold: true, size: 22 } }));
-                const calcRows = Object.entries(calcData).map(([k, v]) => [k, v]);
-                sections.push(createSimpleTable(null, calcRows, [50, 50]));
-                sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
-            }
-
-            // A) Dosing Pump Table
-            sections.push(createParagraph("A) Dosing Pump [Scope: EDI]", { textOptions: { bold: true, size: 22 } }));
-            sections.push(createSimpleTable(
-                null, // No Header row
-                [
-                    ["Capacity", pumpData.capacity, "Make", pumpData.make],
-                    ["Type", pumpData.type, "MOC", pumpData.moc],
-                    ["Quantity", pumpData.qty, "-", "-"]
-                ],
-                [25, 25, 25, 25]
-            ));
-            sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
-
-            // B) Dosing Tank Table
-            if (tankData) {
-                sections.push(createParagraph("B) Dosing Tank [Scope: EDI]", { textOptions: { bold: true, size: 22 } }));
-                sections.push(createSimpleTable(
-                    null,
-                    [
-                        ["Capacity", tankData.capacity, "Type", tankData.type],
-                        ["MOC", tankData.moc, "Make", tankData.make],
-                        ["Quantity", tankData.qty, "-", "-"]
-                    ],
-                    [25, 25, 25, 25]
-                ));
-                sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
-            }
-
-            // C) Agitator Table
-            if (agitatorData) {
-                sections.push(createParagraph("C) Agitator [Scope: EDI]", { textOptions: { bold: true, size: 22 } }));
-                sections.push(createSimpleTable(
-                    null,
-                    [
-                        ["RPM", agitatorData.rpm || "80-90", "Make", agitatorData.make],
-                        ["Type", agitatorData.type, "MOC", agitatorData.moc],
-                        ["Quantity", agitatorData.qty, "-", "-"]
-                    ],
-                    [25, 25, 25, 25]
-                ));
-                sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
-            }
-        };
-
-        // Dosing Systems (Dynamic)
         const dosingKeys = [
             { key: 'Urea', calcKey: 'urea', label: 'Urea Dosing System' },
             { key: 'Phosphoric Acid', calcKey: 'phosphoricAcid', label: 'Phosphoric Acid Dosing System' },
@@ -663,49 +604,112 @@ export const generateProposalWord = async (data) => {
             { key: 'Poly', calcKey: 'poly', label: 'Polymer Dosing System' }
         ];
 
-        dosingKeys.forEach(({ key, calcKey, label }) => {
-            const sys = dosingSystems[key];
-            if (sys && sys.required) {
-                // Prepare pump data
-                const pump = {
-                    capacity: `${safeString(sys.pump?.capacity)} LPH`,
-                    head: `${safeString(sys.pump?.head)} m`,
-                    make: safeString(sys.pump?.make),
-                    type: safeString(sys.pump?.type),
-                    moc: safeString(sys.pump?.moc),
-                    qty: safeString(sys.pump?.qty)
-                };
+        // Check if ANY dosing system is required before printing the main header
+        const isAnyDosingRequired = dosingKeys.some(({ key }) => dosingSystems[key] && dosingSystems[key].required);
 
-                // Prepare tank data
-                let tank = null;
-                if (sys.tank) {
-                    tank = {
-                        capacity: `${safeString(sys.tank?.capacity)} Lit`,
-                        type: safeString(sys.tank?.type || "Vertical"),
-                        moc: safeString(sys.tank?.moc),
-                        make: safeString(sys.tank?.make),
-                        qty: safeString(sys.tank?.qty)
-                    };
+        if (isAnyDosingRequired) {
+            sections.push(createHeading("4.2 Chemical Dosing Systems", 2));
+
+            const renderDosingDetailed = (systemName, calcData, pumpData, tankData, agitatorData) => {
+                // Header
+                sections.push(createHeading(systemName, 3)); // e.g. "Phosphoric Acid Dosing System"
+
+                // Calculations Table (if data provided)
+                if (calcData) {
+                    sections.push(createParagraph("Calculations:", { textOptions: { bold: true, size: 22 } }));
+                    const calcRows = Object.entries(calcData).map(([k, v]) => [k, v]);
+                    sections.push(createSimpleTable(null, calcRows, [50, 50]));
+                    sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
                 }
 
-                // Prepare agitator data
-                let agitator = null;
-                if (sys.agitator) {
-                    agitator = {
-                        rpm: safeString(sys.agitator?.rpm),
-                        make: safeString(sys.agitator?.make),
-                        type: safeString(sys.agitator?.type),
-                        moc: safeString(sys.agitator?.moc),
-                        qty: safeString(sys.agitator?.qty)
-                    };
+                // A) Dosing Pump Table
+                sections.push(createParagraph("A) Dosing Pump [Scope: EDI]", { textOptions: { bold: true, size: 22 } }));
+                sections.push(createSimpleTable(
+                    null, // No Header row
+                    [
+                        ["Capacity", pumpData.capacity, "Make", pumpData.make],
+                        ["Type", pumpData.type, "MOC", pumpData.moc],
+                        ["Quantity", pumpData.qty, "-", "-"]
+                    ],
+                    [25, 25, 25, 25]
+                ));
+                sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
+
+                // B) Dosing Tank Table
+                if (tankData) {
+                    sections.push(createParagraph("B) Dosing Tank [Scope: EDI]", { textOptions: { bold: true, size: 22 } }));
+                    sections.push(createSimpleTable(
+                        null,
+                        [
+                            ["Capacity", tankData.capacity, "Type", tankData.type],
+                            ["MOC", tankData.moc, "Make", tankData.make],
+                            ["Quantity", tankData.qty, "-", "-"]
+                        ],
+                        [25, 25, 25, 25]
+                    ));
+                    sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
                 }
 
-                // Prepare calculations data
-                const calc = dosingCalculations[calcKey] || null;
+                // C) Agitator Table
+                if (agitatorData) {
+                    sections.push(createParagraph("C) Agitator [Scope: EDI]", { textOptions: { bold: true, size: 22 } }));
+                    sections.push(createSimpleTable(
+                        null,
+                        [
+                            ["RPM", agitatorData.rpm || "80-90", "Make", agitatorData.make],
+                            ["Type", agitatorData.type, "MOC", agitatorData.moc],
+                            ["Quantity", agitatorData.qty, "-", "-"]
+                        ],
+                        [25, 25, 25, 25]
+                    ));
+                    sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
+                }
+            };
 
-                renderDosingDetailed(label, calc, pump, tank, agitator);
-            }
-        });
+            dosingKeys.forEach(({ key, calcKey, label }) => {
+                const sys = dosingSystems[key];
+                if (sys && sys.required) {
+                    // Prepare pump data
+                    const pump = {
+                        capacity: `${safeString(sys.pump?.capacity)} LPH`,
+                        head: `${safeString(sys.pump?.head)} m`,
+                        make: safeString(sys.pump?.make),
+                        type: safeString(sys.pump?.type),
+                        moc: safeString(sys.pump?.moc),
+                        qty: safeString(sys.pump?.qty)
+                    };
+
+                    // Prepare tank data
+                    let tank = null;
+                    if (sys.tank) {
+                        tank = {
+                            capacity: `${safeString(sys.tank?.capacity)} Lit`,
+                            type: safeString(sys.tank?.type || "Vertical"),
+                            moc: safeString(sys.tank?.moc),
+                            make: safeString(sys.tank?.make),
+                            qty: safeString(sys.tank?.qty)
+                        };
+                    }
+
+                    // Prepare agitator data
+                    let agitator = null;
+                    if (sys.agitator) {
+                        agitator = {
+                            rpm: safeString(sys.agitator?.rpm),
+                            make: safeString(sys.agitator?.make),
+                            type: safeString(sys.agitator?.type),
+                            moc: safeString(sys.agitator?.moc),
+                            qty: safeString(sys.agitator?.qty)
+                        };
+                    }
+
+                    // Prepare calculations data
+                    const calc = dosingCalculations[calcKey] || null;
+
+                    renderDosingDetailed(label, calc, pump, tank, agitator);
+                }
+            });
+        }
 
 
         // 4.3 Screening System [Scope: EDI]
@@ -748,7 +752,8 @@ export const generateProposalWord = async (data) => {
         }
 
         // 4.6 Pre-acidification Tank [Scope: Client] - (Relevant for Anaerobic)
-        if (selectedSections.includes('Anaerobic Section')) {
+        // 4.6 Pre-acidification Tank [Scope: Client] - (Relevant for Anaerobic but separate unit)
+        if (preAcid && preAcid.required) {
             createEquipSection("4.6", "Pre-acidification Tank", "Client", null,
                 ["Parameter", "Specification"],
                 [
@@ -756,6 +761,9 @@ export const generateProposalWord = async (data) => {
                     ["Agitator", "Submersible / Top Mounted, SS316 (Make: Sulzer/Ceecons/EQT)"]
                 ]
             );
+        }
+
+        if (selectedSections.includes('Anaerobic Section')) {
 
             // 4.7 Anaerobic Feed Pump [Scope: EDI]
             createEquipSection("4.7", "Anaerobic Feed Pump", "EDI", null,
