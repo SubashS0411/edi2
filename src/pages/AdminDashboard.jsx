@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Eye, EyeOff, ArrowLeft, Loader2, Upload, QrCode, Check, AlertTriangle, X, User, FileText, Image, Maximize2, Shield, Calendar, CreditCard, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Loader2, Upload, QrCode, Check, AlertTriangle, X, User, FileText, Image, Maximize2, Shield, Calendar, CreditCard, ChevronDown, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import StatsOverview from '@/components/admin/StatsOverview';
@@ -82,19 +82,6 @@ const AdminDashboard = () => {
         }
     };
 
-    const onUpdateQr = (file) => {
-        setIsUpdatingQr(true);
-        updateQRCode(file).then((result) => {
-            if (result.success) {
-                toast({ title: "QR Code Updated", description: "New payment QR code is now live." });
-                setQrUrl(result.url);
-            } else {
-                toast({ title: "Update Failed", description: result.error, variant: "destructive" });
-            }
-            setIsUpdatingQr(false);
-        });
-    };
-
     const handleSendReminders = async () => {
         setIsSendingReminders(true);
         try {
@@ -157,7 +144,7 @@ const AdminDashboard = () => {
 
                             <Button
                                 variant="ghost"
-                                className="text-slate-400 hover:text-white hover:bg-white/5 rounded-full"
+                                className="text-slate-400 hover:text-white hover:bg-white/5 rounded-full flex items-center gap-2"
                                 onClick={async () => {
                                     if (window.confirm("End Session?")) {
                                         await logout();
@@ -165,7 +152,8 @@ const AdminDashboard = () => {
                                     }
                                 }}
                             >
-                                <X className="w-5 h-5" />
+                                <LogOut className="w-5 h-5" />
+                                <span className="hidden sm:inline">Logout</span>
                             </Button>
                         </div>
                     )}
@@ -184,56 +172,8 @@ const AdminDashboard = () => {
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-                    {/* Left Panel: Configuration (4 cols) */}
-                    <div className="lg:col-span-4 space-y-6">
-
-                        {/* Payment Gate Removed as per request */}
-
-                        {/* Settings Card */}
-                        <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="bg-[#0f1121]/60 backdrop-blur-2xl p-6 rounded-3xl border border-white/5 hover:border-purple-500/30 transition-all duration-300"
-                        >
-                            <div className="flex items-center gap-2 mb-4">
-                                <CreditCard className="w-5 h-5 text-purple-400" />
-                                <h3 className="text-xl font-bold">Billing Config</h3>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 block">Registration Fee (₹)</label>
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                                            <input
-                                                type="number"
-                                                value={currentFee}
-                                                onChange={(e) => setCurrentFee(e.target.value)}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white font-mono focus:border-purple-500/50 outline-none transition-all"
-                                                placeholder="0.00"
-                                            />
-                                        </div>
-                                        <Button
-                                            onClick={async () => {
-                                                const res = await updateRegistrationFee(currentFee);
-                                                if (res.success) toast({ title: "Updated", description: "Fee updated in database." });
-                                                else toast({ title: "Error", description: "Update failed.", variant: "destructive" });
-                                            }}
-                                            className="bg-purple-600 hover:bg-purple-500 px-6 rounded-xl"
-                                        >
-                                            Save
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-
-                    {/* Right Panel: User Management (8 cols) */}
-                    <div className="lg:col-span-8 bg-[#0f1121]/60 backdrop-blur-2xl rounded-3xl border border-white/5 overflow-hidden flex flex-col min-h-[600px]">
+                    {/* Right Panel: User Management (12 cols - Full Width) */}
+                    <div className="lg:col-span-12 bg-[#0f1121]/60 backdrop-blur-2xl rounded-3xl border border-white/5 overflow-hidden flex flex-col min-h-[600px]">
 
                         {/* Toolbar */}
                         <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -319,6 +259,26 @@ const AdminDashboard = () => {
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Action Buttons for Pending Users */}
+                                                {req.subscription_status === 'pending' && (
+                                                    <div className="flex items-center gap-3 mt-4 md:mt-0">
+                                                        <Button
+                                                            onClick={() => onHandleRequest(req.id, 'approve', approvalDuration)}
+                                                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                                            size="sm"
+                                                        >
+                                                            <Check className="w-4 h-4 mr-2" /> Accept
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => onHandleRequest(req.id, 'reject')}
+                                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20"
+                                                            size="sm"
+                                                        >
+                                                            <X className="w-4 h-4 mr-2" /> Deny
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="mt-2 text-xs text-slate-500">
                                                 <button
@@ -338,7 +298,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Proof Modal */}
-            < AnimatePresence >
+            <AnimatePresence>
                 {selectedProof && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setSelectedProof(null)}>
                         <motion.div
@@ -381,10 +341,10 @@ const AdminDashboard = () => {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence >
+            </AnimatePresence>
 
             {/* Client Details Modal */}
-            < AnimatePresence >
+            <AnimatePresence>
                 {selectedClient && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setSelectedClient(null)}>
                         <motion.div
@@ -451,12 +411,26 @@ const AdminDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Payment Proof Section */}
+                                {selectedClient.payment_proof_url && (
+                                    <div className="space-y-4 border-t border-white/10 pt-4">
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Payment Proof</h3>
+                                        <div className="bg-black/40 rounded-xl overflow-hidden border border-white/10 p-2">
+                                            <img
+                                                src={selectedClient.payment_proof_url}
+                                                alt="Payment Proof"
+                                                className="w-full h-auto max-h-[400px] object-contain rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 };
 
