@@ -271,7 +271,7 @@ const Auth = () => {
             </button>
 
             {/* Main Container */}
-            <div className={`relative z-10 w-full px-6 transition-all duration-500 ease-in-out ${(mode === 'billing-summary' || mode === 'plan-selection' || mode === 'signup-step-2') ? 'max-w-[1600px]' : 'max-w-md'}`}>
+            <div className={`relative z-10 w-full px-6 transition-all duration-500 ease-in-out ${(mode === 'billing-summary' || mode === 'plan-selection' || mode === 'signup-step-2') ? 'w-full px-8 md:px-12 pt-20' : 'max-w-md'}`}>
                 <AnimatePresence mode="wait">
 
                     {/* MODE: WELCOME */}
@@ -313,7 +313,12 @@ const Auth = () => {
                                         </div>
                                     </button>
 
-                                    {/* Client Login Button Removed as per request */}
+                                    <button
+                                        onClick={() => setMode('client-login')}
+                                        className="w-full bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white font-medium py-4 rounded-xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:scale-[1.02] mb-4"
+                                    >
+                                        Client Access
+                                    </button>
 
                                     <button
                                         onClick={() => setMode('admin-login')}
@@ -555,13 +560,10 @@ const Auth = () => {
 
                                             {/* Price Section */}
                                             <div className="mb-6">
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-lg text-slate-400 font-medium">₹</span>
-                                                    <span className={`text-4xl lg:text-5xl font-black tracking-tight transition-colors duration-300 ${selectedPlan.id === plan.id ? 'text-white' : 'text-white/90'}`}>
-                                                        {(plan.price / 1000).toFixed(0)}
-                                                    </span>
-                                                    <span className="text-xl text-slate-400 font-semibold">,000</span>
-                                                </div>
+                                                <span className="text-lg text-slate-400 font-medium">₹</span>
+                                                <span className={`text-4xl font-black tracking-tight transition-colors duration-300 ${selectedPlan.id === plan.id ? 'text-white' : 'text-white/90'}`}>
+                                                    {(plan.price / 1000).toFixed(0)},000
+                                                </span>
                                                 {plan.savings && (
                                                     <motion.span
                                                         initial={{ opacity: 0, x: -10 }}
@@ -740,6 +742,7 @@ const Auth = () => {
                                                     value={data.companyName}
                                                     onChange={handleChange}
                                                     placeholder="Business Name"
+                                                    required={data.accountType === 'company'}
                                                     className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-5 py-3.5 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all"
                                                 />
                                             </div>
@@ -750,6 +753,7 @@ const Auth = () => {
                                                     value={data.companyGst}
                                                     onChange={handleChange}
                                                     placeholder="GST Number"
+                                                    required={data.accountType === 'company'}
                                                     className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-5 py-3.5 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all"
                                                 />
                                             </div>
@@ -766,6 +770,7 @@ const Auth = () => {
                                                 value={data.phone}
                                                 onChange={handleChange}
                                                 placeholder="Mobile Number"
+                                                required
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all"
                                             />
                                         </div>
@@ -782,6 +787,7 @@ const Auth = () => {
                                             value={data.address}
                                             onChange={handleChange}
                                             placeholder="Street Address"
+                                            required
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all"
                                         />
                                     </div>
@@ -794,6 +800,7 @@ const Auth = () => {
                                                 value={data.city}
                                                 onChange={handleChange}
                                                 placeholder="City"
+                                                required
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all"
                                             />
                                         </div>
@@ -804,6 +811,7 @@ const Auth = () => {
                                                 value={data.state}
                                                 onChange={handleChange}
                                                 placeholder="State"
+                                                required
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all"
                                             />
                                         </div>
@@ -814,6 +822,7 @@ const Auth = () => {
                                                 value={data.zip}
                                                 onChange={handleChange}
                                                 placeholder="ZIP Code"
+                                                required
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all"
                                             />
                                         </div>
@@ -860,7 +869,21 @@ const Auth = () => {
                                         </div>
 
                                         <Button
-                                            onClick={() => setMode('signup-step-2')}
+                                            onClick={() => {
+                                                const requiredFields = ['phone', 'address', 'city', 'state', 'zip'];
+                                                if (data.accountType === 'company') {
+                                                    requiredFields.push('companyName', 'companyGst');
+                                                }
+
+                                                const emptyFields = requiredFields.filter(field => !data[field]?.trim());
+
+                                                if (emptyFields.length > 0) {
+                                                    alert('Please fill in all required fields.');
+                                                    return;
+                                                }
+
+                                                setMode('signup-step-2');
+                                            }}
                                             className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-6 text-lg rounded-xl shadow-xl shadow-slate-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                                         >
                                             Continue to Payment
@@ -883,7 +906,7 @@ const Auth = () => {
                                 key="step2"
                                 variants={backdropVariants}
                                 initial="hidden" animate="visible" exit="exit"
-                                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 lg:p-10 shadow-2xl relative w-full max-w-5xl"
+                                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 lg:p-10 shadow-2xl relative w-full h-full flex flex-col"
                             >
                                 <div className="flex items-center justify-between mb-8">
                                     <button onClick={() => setMode('billing-summary')} className="text-slate-500 hover:text-white transition-colors p-3 hover:bg-white/10 rounded-xl border border-white/10">
@@ -892,113 +915,93 @@ const Auth = () => {
                                     <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-4 py-1.5 rounded-full border border-emerald-500/20 tracking-wider">STEP 4 / 4</span>
                                 </div>
 
-                                <div className="text-center lg:text-left mb-8">
+                                <div className="text-center mb-8">
                                     <h2 className="text-3xl lg:text-4xl font-black text-white mb-2 tracking-tight">Complete Your Payment</h2>
-                                    <p className="text-slate-400 text-base">Scan the QR code and upload your payment proof to finish registration.</p>
+                                    <p className="text-slate-400 text-base">Upload your payment proof to finish registration.</p>
                                 </div>
 
-                                {/* Side-by-side Layout */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+                                {/* Amount Display at Top */}
+                                <div className="text-center mb-10 bg-slate-900/40 p-6 rounded-2xl border border-white/5 max-w-2xl mx-auto w-full">
+                                    <p className="text-slate-400 text-sm uppercase tracking-wider mb-1 font-bold">Total Amount to Pay</p>
+                                    <p className="text-5xl font-black text-white font-mono my-2">₹{selectedPlan.price.toLocaleString()}</p>
+                                    <p className="text-emerald-400 text-sm font-medium">{selectedPlan.name} Plan • {selectedPlan.duration}</p>
+                                </div>
 
-                                    {/* Left Side: Large QR Code */}
-                                    <div className="flex flex-col items-center justify-center">
-                                        <div className="bg-white p-6 rounded-3xl w-full max-w-[320px] aspect-square flex items-center justify-center shadow-2xl shadow-emerald-900/30 relative overflow-hidden">
-                                            {/* Decorative corners */}
-                                            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-emerald-500 rounded-tl-3xl" />
-                                            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-emerald-500 rounded-tr-3xl" />
-                                            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-emerald-500 rounded-bl-3xl" />
-                                            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-emerald-500 rounded-br-3xl" />
-
-                                            {qrCodeUrl ? (
-                                                <img src={qrCodeUrl} alt="Payment QR" className="w-full h-full object-contain p-2" />
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <Loader2 className="animate-spin text-emerald-500 w-12 h-12 mb-3" />
-                                                    <span className="text-slate-400 text-sm">Loading QR Code...</span>
+                                {/* Payment Form - Centered */}
+                                <div className="flex flex-col justify-center max-w-2xl mx-auto w-full">
+                                    <form onSubmit={handleFinalSignup} className="space-y-8">
+                                        {/* Instructions */}
+                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 mb-2">
+                                            <h4 className="text-emerald-400 font-bold mb-3 flex items-center gap-2">
+                                                <CreditCard className="w-5 h-5" />
+                                                Bank Details
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
+                                                <div>
+                                                    <p className="text-slate-500 text-xs uppercase font-bold">Account Name</p>
+                                                    <p className="font-mono text-white select-all">{BANK_DETAILS.accountName}</p>
                                                 </div>
-                                            )}
+                                                <div>
+                                                    <p className="text-slate-500 text-xs uppercase font-bold">Account Number</p>
+                                                    <p className="font-mono text-white select-all">{BANK_DETAILS.accountNumber}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-slate-500 text-xs uppercase font-bold">IFSC Code</p>
+                                                    <p className="font-mono text-white select-all">{BANK_DETAILS.ifscCode}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-slate-500 text-xs uppercase font-bold">Branch</p>
+                                                    <p className="font-mono text-white select-all">{BANK_DETAILS.branch}</p>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        {/* Amount Display under QR */}
-                                        <div className="mt-6 text-center">
-                                            <p className="text-slate-400 text-sm uppercase tracking-wider mb-1 font-bold">Amount to Pay</p>
-                                            <p className="text-4xl font-black text-white font-mono">₹{selectedPlan.price.toLocaleString()}</p>
-                                            <p className="text-emerald-400 text-sm mt-2 font-medium">{selectedPlan.name} Plan • {selectedPlan.duration}</p>
+                                        {/* Transaction ID Input */}
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-bold text-emerald-500/80 uppercase tracking-widest ml-1">Transaction Ref / UTR Number</label>
+                                            <input
+                                                name="transactionId"
+                                                placeholder="e.g. UPI-1234567890 or Bank Ref No."
+                                                value={data.transactionId}
+                                                onChange={handleChange}
+                                                required
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-emerald-400 font-mono text-lg tracking-wide focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/30 outline-none transition-all placeholder:text-slate-600"
+                                            />
                                         </div>
-                                    </div>
 
-                                    {/* Right Side: Payment Form */}
-                                    <div className="flex flex-col justify-center">
-                                        <form onSubmit={handleFinalSignup} className="space-y-6">
-                                            {/* Instructions */}
-                                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 mb-2">
-                                                <h4 className="text-emerald-400 font-bold mb-3 flex items-center gap-2">
-                                                    <QrCode className="w-5 h-5" />
-                                                    Payment Instructions
-                                                </h4>
-                                                <ol className="text-sm text-slate-300 space-y-2">
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="w-5 h-5 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-xs font-bold flex-shrink-0">1</span>
-                                                        <span>Open any UPI app (GPay, PhonePe, Paytm)</span>
-                                                    </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="w-5 h-5 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-xs font-bold flex-shrink-0">2</span>
-                                                        <span>Scan the QR code and complete payment</span>
-                                                    </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="w-5 h-5 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 text-xs font-bold flex-shrink-0">3</span>
-                                                        <span>Enter UTR/Reference number & upload screenshot</span>
-                                                    </li>
-                                                </ol>
-                                            </div>
+                                        {/* File Upload */}
+                                        <div className="relative group">
+                                            <input type="file" id="file_upload" className="hidden" onChange={handleFileChange} accept="image/*" />
+                                            <label htmlFor="file_upload" className="flex flex-col items-center justify-center w-full px-6 py-8 border-2 border-dashed border-white/10 hover:border-emerald-500/50 rounded-2xl cursor-pointer bg-black/20 hover:bg-emerald-500/5 transition-all duration-300 text-center">
+                                                <Upload className="w-8 h-8 mb-3 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                                                {data.paymentProof ? (
+                                                    <span className="text-emerald-400 flex items-center bg-emerald-500/10 px-4 py-2 rounded-full text-sm border border-emerald-500/20 font-medium">
+                                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                                        {data.paymentProof.name.substring(0, 25)}...
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-slate-400 group-hover:text-emerald-400 font-medium transition-colors">Upload Payment Screenshot</span>
+                                                        <span className="text-slate-600 text-sm mt-1">PNG, JPG up to 5MB</span>
+                                                    </>
+                                                )}
+                                            </label>
+                                        </div>
 
-                                            {/* Transaction ID Input */}
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-bold text-emerald-500/80 uppercase tracking-widest ml-1">Transaction Ref / UTR Number</label>
-                                                <input
-                                                    name="transactionId"
-                                                    placeholder="e.g. UPI-1234567890 or Bank Ref No."
-                                                    value={data.transactionId}
-                                                    onChange={handleChange}
-                                                    required
-                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-emerald-400 font-mono text-lg tracking-wide focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/30 outline-none transition-all placeholder:text-slate-600"
-                                                />
-                                            </div>
+                                        {/* Submit Button */}
+                                        <Button
+                                            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-6 text-lg font-bold shadow-xl shadow-emerald-900/30 border border-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                            disabled={isLoading}
+                                        >
+                                            {isLoading ? <Loader2 className="animate-spin" /> : "Complete Registration"}
+                                        </Button>
 
-                                            {/* File Upload */}
-                                            <div className="relative group">
-                                                <input type="file" id="file_upload" className="hidden" onChange={handleFileChange} accept="image/*" />
-                                                <label htmlFor="file_upload" className="flex flex-col items-center justify-center w-full px-6 py-8 border-2 border-dashed border-white/10 hover:border-emerald-500/50 rounded-2xl cursor-pointer bg-black/20 hover:bg-emerald-500/5 transition-all duration-300 text-center">
-                                                    <Upload className="w-8 h-8 mb-3 text-slate-500 group-hover:text-emerald-400 transition-colors" />
-                                                    {data.paymentProof ? (
-                                                        <span className="text-emerald-400 flex items-center bg-emerald-500/10 px-4 py-2 rounded-full text-sm border border-emerald-500/20 font-medium">
-                                                            <CheckCircle className="w-4 h-4 mr-2" />
-                                                            {data.paymentProof.name.substring(0, 25)}...
-                                                        </span>
-                                                    ) : (
-                                                        <>
-                                                            <span className="text-slate-400 group-hover:text-emerald-400 font-medium transition-colors">Upload Payment Screenshot</span>
-                                                            <span className="text-slate-600 text-sm mt-1">PNG, JPG up to 5MB</span>
-                                                        </>
-                                                    )}
-                                                </label>
-                                            </div>
-
-                                            {/* Submit Button */}
-                                            <Button
-                                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-6 text-lg font-bold shadow-xl shadow-emerald-900/30 border border-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                                                disabled={isLoading}
-                                            >
-                                                {isLoading ? <Loader2 className="animate-spin" /> : "Complete Registration"}
-                                            </Button>
-
-                                            {/* Security Badge */}
-                                            <div className="flex items-center justify-center gap-2 text-xs text-slate-500 pt-2">
-                                                <ShieldCheck className="w-4 h-4 text-emerald-500/50" />
-                                                <span>Your payment is secure and encrypted</span>
-                                            </div>
-                                        </form>
-                                    </div>
+                                        {/* Security Badge */}
+                                        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 pt-2">
+                                            <ShieldCheck className="w-4 h-4 text-emerald-500/50" />
+                                            <span>Your payment is secure and encrypted</span>
+                                        </div>
+                                    </form>
                                 </div>
                             </motion.div>
                         )
