@@ -259,7 +259,8 @@ const Auth = () => {
         // Simulate upload delay
         await new Promise(r => setTimeout(r, 1000));
 
-        const cleanEmail = data.email.trim();
+        // Aggressive sanitization: Remove anything that is NOT a valid email character
+        const cleanEmail = data.email.replace(/[^a-zA-Z0-9@._-]/g, '').trim().toLowerCase();
 
         const result = await submitSignupRequest({
             name: data.name,

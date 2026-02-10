@@ -434,18 +434,7 @@ const Step2 = ({
 
   }, [anaerobicFeedParams, secondaryClarifierTank.proposedDia, primaryClarifier.dim, primaryClarifier.qty, primaryClarifier.outletTSS]);
 
-  // Auto-calculate Aerobic sCOD Efficiency based on Anaerobic Efficiency
-  useEffect(() => {
-    if (performanceSpecs.anaSCODEff) {
-      const anaEff = parseFloat(performanceSpecs.anaSCODEff) || 0;
-      const calculatedAeroEff = (100 - anaEff).toFixed(0);
 
-      // Only update if different to avoid infinite loops, though strict equality check with string might be tricky
-      if (performanceSpecs.aeroSCODEff !== calculatedAeroEff) {
-        setPerformanceSpecs(prev => ({ ...prev, aeroSCODEff: calculatedAeroEff }));
-      }
-    }
-  }, [performanceSpecs.anaSCODEff, setPerformanceSpecs]);
 
   // State for Surface Aerators Calculation
   const [surfaceAeratorCalc, setSurfaceAeratorCalc] = useState({

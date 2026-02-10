@@ -243,6 +243,16 @@ const Step1 = ({
     }
   }, [params, anaerobicFeedParams]);
 
+  // Auto-calculate Aerobic sCOD Efficiency based on Anaerobic Efficiency
+  useEffect(() => {
+    if (guarantees.anaerobicSCODEff) {
+      const anaEff = parseFloat(guarantees.anaerobicSCODEff) || 0;
+      // Logic: Aerobic Eff = 100 - Anaerobic Eff (Remainder)
+      const calculatedAeroEff = (100 - anaEff).toFixed(0);
+      setGuarantees(prev => ({ ...prev, aerobicSCODEff: calculatedAeroEff }));
+    }
+  }, [guarantees.anaerobicSCODEff, setGuarantees]);
+
   // Auto-calculate COD Load for Paper Industry
   useEffect(() => {
     if (clientInfo.industry !== 'Paper') return;
@@ -586,6 +596,9 @@ const Step1 = ({
         {selectedSections.includes('Aerobic Section') && (
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h4 className="font-bold text-blue-800 mb-3">Aerobic Section (Secondary Clarifier Outlet)</h4>
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              <InputField label="Aerobic sCOD Efficiency (%)" value={guarantees.aerobicSCODEff || ''} onChange={v => setGuarantees(prev => ({ ...prev, aerobicSCODEff: v }))} type="number" />
+            </div>
             <div className="grid md:grid-cols-3 gap-4">
               <InputField label="Outlet sCOD (mg/l)" value={guarantees.outletCOD} onChange={v => setGuarantees(prev => ({ ...prev, outletCOD: v }))} />
               <InputField label="Outlet TSS (mg/l)" value={guarantees.outletTSS} onChange={v => setGuarantees(prev => ({ ...prev, outletTSS: v }))} />

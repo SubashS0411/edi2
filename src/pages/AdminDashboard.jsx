@@ -19,6 +19,7 @@ const AdminDashboard = () => {
     const [qrUrl, setQrUrl] = useState('');
     const [isUpdatingQr, setIsUpdatingQr] = useState(false);
     const [selectedProof, setSelectedProof] = useState(null);
+    const [selectedClient, setSelectedClient] = useState(null); // New state for client detail view
     const [loadingData, setLoadingData] = useState(true);
     const [approvalDuration, setApprovalDuration] = useState(12);
     const [isSendingReminders, setIsSendingReminders] = useState(false);
@@ -187,47 +188,7 @@ const AdminDashboard = () => {
                     {/* Left Panel: Configuration (4 cols) */}
                     <div className="lg:col-span-4 space-y-6">
 
-                        {/* Payment QR Card */}
-                        <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="bg-[#0f1121]/60 backdrop-blur-2xl p-6 rounded-3xl border border-white/5 hover:border-indigo-500/30 transition-all duration-300 group"
-                        >
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <QrCode className="w-5 h-5 text-indigo-400" /> Payment Gate
-                                </h3>
-                                <div className="w-2 h-2 rounded-full bg-indigo-500 group-hover:shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-shadow"></div>
-                            </div>
-
-                            <div className="relative aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl flex items-center justify-center border border-white/5 p-4 mb-4 overflow-hidden">
-                                {qrUrl ? (
-                                    <img src={qrUrl} alt="QR" className="w-full h-full object-contain drop-shadow-2xl" />
-                                ) : (
-                                    <div className="text-center text-slate-500 text-sm">No QR Configured</div>
-                                )}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-sm">
-                                    <p className="text-white font-medium">Payment QR</p>
-                                </div>
-                            </div>
-
-                            <label className="block">
-                                <span className="sr-only">Upload QR</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => e.target.files?.[0] && onUpdateQr(e.target.files[0])}
-                                    className="block w-full text-sm text-slate-400
-                                    file:mr-4 file:py-2.5 file:px-4
-                                    file:rounded-full file:border-0
-                                    file:text-sm file:font-semibold
-                                    file:bg-indigo-600 file:text-white
-                                    hover:file:bg-indigo-500
-                                    cursor-pointer ring-1 ring-white/10 rounded-full bg-black/20"
-                                />
-                            </label>
-                        </motion.div>
+                        {/* Payment Gate Removed as per request */}
 
                         {/* Settings Card */}
                         <motion.div
@@ -337,7 +298,7 @@ const AdminDashboard = () => {
                                                                 {req.full_name || 'Anonymous'}
                                                             </h4>
                                                             <div className={`w-2 h-2 rounded-full ${req.subscription_status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                                                                    req.subscription_status === 'disabled' ? 'bg-red-500' : 'bg-amber-500'
+                                                                req.subscription_status === 'disabled' ? 'bg-red-500' : 'bg-amber-500'
                                                                 }`} />
                                                         </div>
                                                         <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
@@ -358,36 +319,14 @@ const AdminDashboard = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-
-                                                {/* Actions */}
-                                                <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
-                                                    {req.subscription_status === 'pending' ? (
-                                                        <>
-                                                            <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-red-400 hover:bg-red-500/10" onClick={() => onHandleRequest(req.id, 'reject')}>
-                                                                Dismiss
-                                                            </Button>
-                                                            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-500/20" onClick={() => onHandleRequest(req.id, 'approve', approvalDuration)}>
-                                                                <Check className="w-3.5 h-3.5 mr-1.5" /> Approve
-                                                            </Button>
-                                                        </>
-                                                    ) : req.subscription_status === 'active' ? (
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="text-right hidden sm:block">
-                                                                <p className="text-[10px] uppercase tracking-wider text-slate-500">Expires</p>
-                                                                <p className="text-xs font-medium text-emerald-400">
-                                                                    {new Date(req.subscription_end).toLocaleDateString()}
-                                                                </p>
-                                                            </div>
-                                                            <Button size="sm" variant="outline" className="h-8 border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-black" onClick={() => onHandleRequest(req.id, 'disable')}>
-                                                                Suspend
-                                                            </Button>
-                                                        </div>
-                                                    ) : (
-                                                        <Button size="sm" variant="outline" className="h-8 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-black" onClick={() => onHandleRequest(req.id, 'enable', approvalDuration)}>
-                                                            Re-Enable
-                                                        </Button>
-                                                    )}
-                                                </div>
+                                            </div>
+                                            <div className="mt-2 text-xs text-slate-500">
+                                                <button
+                                                    onClick={() => setSelectedClient(req)}
+                                                    className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2 flex items-center gap-1"
+                                                >
+                                                    <FileText className="w-3 h-3" /> View Full Details
+                                                </button>
                                             </div>
                                         </motion.div>
                                     ))}
@@ -399,7 +338,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Proof Modal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {selectedProof && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setSelectedProof(null)}>
                         <motion.div
@@ -442,8 +381,82 @@ const AdminDashboard = () => {
                         </motion.div>
                     </div>
                 )}
+            </AnimatePresence >
+
+            {/* Client Details Modal */}
+            < AnimatePresence >
+                {selectedClient && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" onClick={() => setSelectedClient(null)}>
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-[#0f1121] border border-white/10 rounded-3xl p-8 max-w-2xl w-full shadow-2xl relative"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white mb-1">Client Profile</h2>
+                                    <p className="text-slate-400 text-sm">Full registration details</p>
+                                </div>
+                                <button onClick={() => setSelectedClient(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                    <X className="w-5 h-5 text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                        <p className="text-xs uppercase font-bold text-indigo-400 mb-1">Account Type</p>
+                                        <p className="text-white capitalize font-medium">{selectedClient.company_gst ? 'Company' : 'Individual'}</p>
+                                    </div>
+                                    <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                        <p className="text-xs uppercase font-bold text-indigo-400 mb-1">Status</p>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${selectedClient.subscription_status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                            {selectedClient.subscription_status?.toUpperCase()}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {selectedClient.company_name && (
+                                    <div className="space-y-4 border-t border-white/10 pt-4">
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Company Details</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-xs text-slate-500 mb-1">Company Name</p>
+                                                <p className="text-white font-medium">{selectedClient.company_name}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-slate-500 mb-1">GSTIN</p>
+                                                <p className="text-white font-mono">{selectedClient.company_gst || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-4 border-t border-white/10 pt-4">
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Contact & Address</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-slate-500 mb-1">Email</p>
+                                            <p className="text-white">{selectedClient.email}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 mb-1">Phone</p>
+                                            <p className="text-white font-mono">{selectedClient.company_phone || 'N/A'}</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-xs text-slate-500 mb-1">Address</p>
+                                            <p className="text-white leading-relaxed">{selectedClient.company_address || 'No address provided'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

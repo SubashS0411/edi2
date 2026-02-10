@@ -148,6 +148,7 @@ export const generateProposalWord = async (data) => {
             clientInfo = {},
             params = [],
             anaerobicFeedParams = [],
+            guarantees = {},
             dosingSystems = {},
             dosingCalculations = {},
             daf = {},
@@ -396,7 +397,12 @@ export const generateProposalWord = async (data) => {
                 createHeading(performanceGuarantees.anaerobic.title, 3),
                 createSimpleTable(
                     performanceGuarantees.anaerobic.headers,
-                    performanceGuarantees.anaerobic.data.map(d => [d.param, d.val]),
+                    performanceGuarantees.anaerobic.data.map(d => {
+                        let val = d.val;
+                        if (d.param === "Anaerobic SCOD Removal") val = guarantees.anaerobicSCODEff ? `${guarantees.anaerobicSCODEff}%` : d.val;
+                        if (d.param === "Anaerobic BOD Removal") val = guarantees.anaerobicBODEff ? `${guarantees.anaerobicBODEff}%` : d.val;
+                        return [d.param, val];
+                    }),
                     [50, 50]
                 ),
                 new Paragraph({ text: "", spacing: { before: 240 } })
@@ -406,7 +412,18 @@ export const generateProposalWord = async (data) => {
                 createHeading(performanceGuarantees.aerobic.title, 3),
                 createSimpleTable(
                     performanceGuarantees.aerobic.headers,
-                    performanceGuarantees.aerobic.data.map(d => [d.param, d.val]),
+                    [
+                        // Dynamic Efficiency Row
+                        ...(guarantees.aerobicSCODEff ? [["Aerobic sCOD Efficiency", `${guarantees.aerobicSCODEff}%`]] : []),
+                        // Static Outlet Rows (mapped with dynamic overrides)
+                        ...performanceGuarantees.aerobic.data.map(d => {
+                            let val = d.val;
+                            if (d.param === "Secondary Clarifier Outlet SCOD") val = guarantees.outletCOD ? `${guarantees.outletCOD} mg/l` : d.val;
+                            if (d.param === "Secondary Clarifier Outlet TSS") val = guarantees.outletTSS ? `${guarantees.outletTSS} mg/l` : d.val;
+                            if (d.param === "Secondary Clarifier Outlet BOD") val = guarantees.outletBOD ? `${guarantees.outletBOD} mg/l` : d.val;
+                            return [d.param, val];
+                        })
+                    ],
                     [50, 50]
                 )
             ] : []),
