@@ -16,7 +16,8 @@ import {
     ImageRun,
     VerticalAlign,
     PageNumber,
-    HeadingLevel
+    HeadingLevel,
+    TableOfContents
 } from "docx";
 import { saveAs } from "file-saver";
 import { clientScopeData } from './clientScopeData';
@@ -286,50 +287,25 @@ export const generateProposalWord = async (data) => {
             }),
 
             // ==========================================
-            // PAGE 2: TABLE OF CONTENTS (Static)
+            // PAGE 2: TABLE OF CONTENTS (Dynamic)
             // ==========================================
 
-            createHeading("Table of Contents"),
-
-            // Static TOC - All section titles with page numbers
-            createSimpleTable(
-                ["Section", "Title", "Page"],
-                [
-                    ["1", "Client Details & Design Basis", "3"],
-                    ["2", "Influent Parameters", "4"],
-                    ["  2.1", "Technology Overview", "5"],
-                    ["  2.2", "Process Description", "5"],
-                    ["  2.3", "Performance Guarantees", "6"],
-                    ["3", "Process Impact Analysis", "7"],
-                    ["  3.1", "Impact of Bromide", "7"],
-                    ["  3.2", "Impact of Heavy Metals", "8"],
-                    ["  3.3", "Impact of Higher VFA", "8"],
-                    ["4", "Process Equipment Specifications", "9"],
-                    ["  4.1", "Dissolved Air Flotation (DAF) [Scope: EDI]", "9"],
-                    ["  4.2", "Chemical Dosing Systems", "10"],
-                    ["  4.3", "Screening System [Scope: EDI]", "12"],
-                    ["  4.4", "Primary Clarification System [Scope: Client]", "12"],
-                    ["  4.5", "Cooling System (PHE) [Scope: EDI]", "13"],
-                    ["  4.6", "Pre-acidification Tank [Scope: Client]", "13"],
-                    ["  4.7", "Anaerobic Feed Pump [Scope: EDI]", "14"],
-                    ["  4.8", "Anaerobic Reactor System", "14"],
-                    ["  4.9", "Biomass Transfer Pump [Scope: EDI]", "15"],
-                    ["  4.10", "Biogas Handling System", "15"],
-                    ["  4.11", "Biomass Holding Tank [Scope: EDI]", "16"],
-                    ["  4.12", "Start-up Granular Biomass", "16"],
-                    ["  4.13", "Aeration Tank System [Scope: Client]", "17"],
-                    ["  4.14", "Aeration System Components", "17"],
-                    ["  4.15", "Secondary Clarifier System", "18"],
-                    ["  4.16", "Sludge Recirculation Pump [Scope: EDI]", "18"],
-                    ["  4.17", "Sludge Management System [Scope: EDI]", "19"],
-                    ["  4.18", "Treated Water Handling", "19"],
-                    ["  4.19", "Other Major Equipment", "20"],
-                    ["  4.20", "Pipings", "21"],
-                    ["  4.21", "Valves", "21"],
-                    ["5", "Exclusions from Scope of Supply & Services", "22"]
+            new Paragraph({
+                children: [
+                    new TextRun({
+                        text: "Table of Contents",
+                        bold: true,
+                        size: 36, // Heading 1 size
+                        color: "2E74B5"
+                    })
                 ],
-                [10, 75, 15]
-            ),
+                spacing: { before: 240, after: 240 },
+                alignment: AlignmentType.LEFT,
+            }),
+            new TableOfContents("Summary", {
+                hyperlink: true,
+                headingStyleRange: "1-3",
+            }),
             new Paragraph({ children: [new PageBreak()] })
         );
 
@@ -364,16 +340,23 @@ export const generateProposalWord = async (data) => {
             createHeading("2. Influent Parameters"),
             createSimpleTable(
                 ["Parameter", "Unit", "Inlet Water Characteristics", "Anaerobic Feed Water Characteristics"],
-                staticDesignBasis.parameters.map(p => {
-                    const userParam = params.find(up => (up.name === p.param) || (up.id === p.sn)); // Best effort match
-                    const userAnaParam = anaerobicFeedParams.find(up => (up.name === p.param) || (up.id === p.sn));
-                    return [
-                        safeString(p.param),
-                        safeString(p.unit),
-                        safeString(userParam ? userParam.value : p.raw),
-                        safeString(userAnaParam ? userAnaParam.value : p.anaInlet)
-                    ];
-                }),
+                [
+                    ...staticDesignBasis.parameters.map(p => {
+                        const userParam = params.find(up => (up.name === p.param) || (up.id === p.sn)); // Best effort match
+                        const userAnaParam = anaerobicFeedParams.find(up => (up.name === p.param) || (up.id === p.sn));
+                        return [
+                            safeString(p.param),
+                            safeString(p.unit),
+                            safeString(userParam ? userParam.value : p.raw),
+                            safeString(userAnaParam ? userAnaParam.value : p.anaInlet)
+                        ];
+                    }),
+                    // Calculated Loads
+                    ["sCOD Load", "kg/day", safeString(clientInfo.inletSCODLoad), safeString(clientInfo.anaerobicSCODLoad)],
+                    ["BOD Load", "kg/day", safeString(clientInfo.inletBODLoad), safeString(clientInfo.anaerobicBODLoad)],
+                    ["Nitrogen (N) Load", "kg/day", safeString(clientInfo.inletNLoad), safeString(clientInfo.anaerobicNLoad)],
+                    ["Phosphorus (P) Load", "kg/day", safeString(clientInfo.inletPLoad), safeString(clientInfo.anaerobicPLoad)]
+                ],
                 [25, 15, 30, 30]
             ),
             createParagraph("Notes:", { spacingBefore: 240, textOptions: { bold: true } }),
@@ -1095,6 +1078,45 @@ export const generateProposalWord = async (data) => {
                     [50, 50]
                 ));
             }
+            sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
+        }
+
+        // 4.19.3 UV Disinfection System
+        if (selectedSections.includes('UV Section')) {
+            sections.push(createHeading("4.19.3 UV Disinfection System", 2));
+            const uv = data.uvGuarantees || {};
+
+            sections.push(createHeading("Outcome Guarantees", 3));
+            sections.push(createSimpleTable(
+                ["Parameter", "Guaranteed Value"],
+                [
+                    ["Bacterial Count", safeString(uv.bacterialCount)],
+                    ["Outlet sCOD", `${safeString(uv.outletSCOD)} mg/l`],
+                    ["Outlet TSS", `${safeString(uv.outletTSS)} mg/l`],
+                    ["Outlet TDS", `${safeString(uv.outletTDS)} mg/l`]
+                ],
+                [50, 50]
+            ));
+            sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
+        }
+
+        // 4.19.4 RO System
+        if (selectedSections.includes('RO Permeate Section')) {
+            sections.push(createHeading("4.19.4 RO System (Reverse Osmosis)", 2));
+            const ro = data.roGuarantees || {};
+
+            sections.push(createHeading("Outcome Guarantees (Permeate)", 3));
+            sections.push(createSimpleTable(
+                ["Parameter", "Guaranteed Value"],
+                [
+                    ["Outlet pH", safeString(ro.outletPH)],
+                    ["Outlet sCOD", `${safeString(ro.outletSCOD)} mg/l`],
+                    ["Outlet BOD", `${safeString(ro.outletBOD)} mg/l`],
+                    ["Outlet TSS", `${safeString(ro.outletTSS)} mg/l`],
+                    ["Outlet TDS", `${safeString(ro.outletTDS)} mg/l`]
+                ],
+                [50, 50]
+            ));
             sections.push(new Paragraph({ text: "", spacing: { before: 120 } }));
         }
 

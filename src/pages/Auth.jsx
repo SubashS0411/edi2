@@ -72,7 +72,7 @@ const BANK_DETAILS = {
 const Auth = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { login, submitSignupRequest, getQRCode, resendVerification } = useAuth();
+    const { login, submitSignupRequest, getQRCode, resendVerification, resetPassword, updatePassword } = useAuth();
     const { toast } = useToast();
 
     // Initialize mode based on URL param 'mode' or default to 'welcome'
@@ -113,6 +113,17 @@ const Auth = () => {
     useEffect(() => {
         setQrCodeUrl(getQRCode());
     }, [getQRCode]);
+
+    // Check for password recovery mode
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash && hash.includes('type=recovery')) {
+            setMode('update-password');
+        }
+        if (window.location.pathname === '/update-password') {
+            setMode('update-password');
+        }
+    }, []);
 
     const handleChange = (e) => setData({ ...data, [e.target.name]: e.target.value });
 
@@ -168,6 +179,45 @@ const Auth = () => {
             } else {
                 toast({ title: "Access Denied", description: result.error, variant: "destructive" });
             }
+        }
+        setIsLoading(false);
+    };
+
+    const handleForgotPassword = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        const res = await resetPassword(data.email);
+        if (res.success) {
+            toast({
+                title: "Recovery Email Sent",
+                description: "Check your inbox for the password reset link.",
+                className: "bg-emerald-500 text-white border-none"
+            });
+            setMode('check-email');
+        } else {
+            toast({ title: "Error", description: res.error, variant: "destructive" });
+        }
+        setIsLoading(false);
+    };
+
+    const handleUpdatePassword = async (e) => {
+        e.preventDefault();
+        if (data.password !== data.confirmPassword) {
+            toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
+            return;
+        }
+        setIsLoading(true);
+        const res = await updatePassword(data.password);
+        if (res.success) {
+            toast({
+                title: "Password Updated",
+                description: "You can now login with your new password.",
+                className: "bg-emerald-500 text-white border-none"
+            });
+            setMode('client-login');
+            navigate('/signup'); // clear url params
+        } else {
+            toast({ title: "Error", description: res.error, variant: "destructive" });
         }
         setIsLoading(false);
     };
@@ -370,6 +420,11 @@ const Auth = () => {
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all placeholder:text-slate-700 font-medium tracking-widest"
                                         placeholder="••••••••"
                                     />
+                                </div>
+                                <div className="text-right">
+                                    <button type="button" onClick={() => setMode('forgot-password')} className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
+                                        Forgot Password?
+                                    </button>
                                 </div>
                                 <Button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-6 text-lg font-bold shadow-lg shadow-emerald-900/20 mt-4 border border-white/10" disabled={isLoading}>
                                     {isLoading ? <Loader2 className="animate-spin" /> : "Sign In"}
@@ -1042,6 +1097,91 @@ const Auth = () => {
                             </motion.div>
                         )
                     }
+
+
+                    {/* MODE: FORGOT PASSWORD */}
+                    {mode === 'forgot-password' && (
+                        <motion.div
+                            key="forgot-password"
+                            variants={backdropVariants}
+                            initial="hidden" animate="visible" exit="exit"
+                            className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl relative"
+                        >
+                            <button onClick={() => setMode('client-login')} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full">
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
+                            <div className="text-center mt-8 mb-8">
+                                <h2 className="text-2xl font-bold text-white tracking-tight">Reset Password</h2>
+                                <p className="text-slate-400 text-sm mt-1">Enter your email to receive recovery instructions.</p>
+                            </div>
+                            <form onSubmit={handleForgotPassword} className="space-y-5">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-emerald-500/80 uppercase tracking-widest ml-1">Email Address</label>
+                                    <input name="email" type="email" value={data.email} onChange={handleChange} required
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all placeholder:text-slate-700 font-medium"
+                                        placeholder="client@company.com"
+                                    />
+                                </div>
+                                <Button className="w-full bg-emerald-600 hover:bg-emerald-500 py-6 text-lg font-bold shadow-lg mt-4 border border-white/10" disabled={isLoading}>
+                                    {isLoading ? <Loader2 className="animate-spin" /> : "Send Recovery Link"}
+                                </Button>
+                            </form>
+                        </motion.div>
+                    )}
+
+                    {/* MODE: CHECK EMAIL */}
+                    {mode === 'check-email' && (
+                        <motion.div
+                            key="check-email"
+                            variants={backdropVariants}
+                            initial="hidden" animate="visible" exit="exit"
+                            className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-10 shadow-2xl text-center relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-cyan-500" />
+                            <div className="mx-auto w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mb-8 border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
+                                <CheckCircle className="text-emerald-400 w-10 h-10" />
+                            </div>
+                            <h2 className="text-3xl font-bold text-white mb-4 tracking-tight">Check Your Inbox</h2>
+                            <p className="text-slate-400 text-lg mb-8 leading-relaxed">We've sent a password recovery link to <br /><span className="text-white font-medium">{data.email}</span>.</p>
+                            <Button onClick={() => setMode('client-login')} className="w-full bg-slate-800 hover:bg-slate-700 py-6 text-base font-bold shadow-xl border border-white/5">
+                                Back to Login
+                            </Button>
+                        </motion.div>
+                    )}
+
+                    {/* MODE: UPDATE PASSWORD */}
+                    {mode === 'update-password' && (
+                        <motion.div
+                            key="update-password"
+                            variants={backdropVariants}
+                            initial="hidden" animate="visible" exit="exit"
+                            className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl relative"
+                        >
+                            <div className="text-center mt-8 mb-8">
+                                <h2 className="text-2xl font-bold text-white tracking-tight">Set New Password</h2>
+                                <p className="text-slate-400 text-sm mt-1">Please enter your new password below.</p>
+                            </div>
+                            <form onSubmit={handleUpdatePassword} className="space-y-5">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-emerald-500/80 uppercase tracking-widest ml-1">New Password</label>
+                                    <input name="password" type="password" value={data.password} onChange={handleChange} required minLength={6}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all placeholder:text-slate-700 font-medium tracking-widest"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-emerald-500/80 uppercase tracking-widest ml-1">Confirm Password</label>
+                                    <input name="confirmPassword" type="password" value={data.confirmPassword} onChange={handleChange} required minLength={6}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:border-emerald-500/50 outline-none transition-all placeholder:text-slate-700 font-medium tracking-widest"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                                <Button className="w-full bg-emerald-600 hover:bg-emerald-500 py-6 text-lg font-bold shadow-lg mt-4 border border-white/10" disabled={isLoading}>
+                                    {isLoading ? <Loader2 className="animate-spin" /> : "Update Password"}
+                                </Button>
+                            </form>
+                        </motion.div>
+                    )}
 
                 </AnimatePresence >
             </div >

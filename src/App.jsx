@@ -13,6 +13,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Auth />} />
+          <Route path="/update-password" element={<Auth />} />
+          <Route path="/reset-password" element={<Auth />} />
+          <Route path="/auth/callback" element={<Auth />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
         <Toaster />

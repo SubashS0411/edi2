@@ -434,6 +434,19 @@ const Step2 = ({
 
   }, [anaerobicFeedParams, secondaryClarifierTank.proposedDia, primaryClarifier.dim, primaryClarifier.qty, primaryClarifier.outletTSS]);
 
+  // Auto-calculate Aerobic sCOD Efficiency based on Anaerobic Efficiency
+  useEffect(() => {
+    if (performanceSpecs.anaSCODEff) {
+      const anaEff = parseFloat(performanceSpecs.anaSCODEff) || 0;
+      const calculatedAeroEff = (100 - anaEff).toFixed(0);
+
+      // Only update if different to avoid infinite loops, though strict equality check with string might be tricky
+      if (performanceSpecs.aeroSCODEff !== calculatedAeroEff) {
+        setPerformanceSpecs(prev => ({ ...prev, aeroSCODEff: calculatedAeroEff }));
+      }
+    }
+  }, [performanceSpecs.anaSCODEff, setPerformanceSpecs]);
+
   // State for Surface Aerators Calculation
   const [surfaceAeratorCalc, setSurfaceAeratorCalc] = useState({
     bodEntering: 0,
@@ -495,8 +508,13 @@ const Step2 = ({
     if (clientInfo.anaerobicBODLoad && performanceResults) {
       // 1. Aeration Tank Basic Calcs
       const anaBODLoad = parseFloat(clientInfo.anaerobicBODLoad) || 0;
-      const removedBODAna = parseFloat(performanceResults.kgBODRemovedAna) || 0;
-      const bodEntering = Math.max(0, anaBODLoad - removedBODAna);
+
+      // Use dynamic efficiency from guarantees if available, else fallback
+      const efficiency = parseFloat(guarantees?.anaerobicBODEff || performanceSpecs?.anaBODEff || 80);
+
+      // Calculate entering BOD based on efficiency formula
+      const bodEntering = Math.max(0, anaBODLoad * (1 - efficiency / 100));
+      const removedBODAna = Math.max(0, anaBODLoad - bodEntering);
 
       const fm = parseFloat(aerationTank.fmRatio) || 0.15;
       const mlss = parseFloat(aerationTank.mlss) || 3500;
