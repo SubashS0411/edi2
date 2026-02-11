@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calculator, Zap, Droplets, FileText } from 'lucide-react'; 
+import { Calculator, Zap, Droplets, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import ProposalGenerator from '@/components/ProposalGenerator';
@@ -28,6 +29,7 @@ const ProposalTabContent = () => {
 
 const CalculatorsContent = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('biogas'); // Default to biogas
 
   // Biogas State
@@ -71,13 +73,13 @@ const CalculatorsContent = () => {
     }
 
     const flowDay = flow * 24;
-    const loadKgDay = (flowDay * scod) / 1000; 
+    const loadKgDay = (flowDay * scod) / 1000;
     const removedKgDay = loadKgDay * (eff / 100);
-    
+
     // Biogas Generation
     const biogasGenNm3 = removedKgDay * 0.43;
     const totalKcal = biogasGenNm3 * 5000;
-    
+
     const selectedFuel = FUELS[biogasInputs.fuelType];
     const fuelSavings = totalKcal / selectedFuel.cv;
 
@@ -114,9 +116,9 @@ const CalculatorsContent = () => {
 
     const codLoadKgDay = (flow * 24 * scod) / 1000;
     const removedCodKgDay = codLoadKgDay * (eff / 100);
-    
-    const requiredN = removedCodKgDay * (5 / 500); 
-    const requiredP = removedCodKgDay * (1 / 500); 
+
+    const requiredN = removedCodKgDay * (5 / 500);
+    const requiredP = removedCodKgDay * (1 / 500);
 
     const existingN = (flow * 24 * nh4) / 1000;
     const existingP = (flow * 24 * po4) / 1000;
@@ -126,15 +128,15 @@ const CalculatorsContent = () => {
 
     // Option 1: Urea + Phosphoric Acid
     const ureaOnlyDosing = deficitN / 0.46;
-    const acidDosing = deficitP / 0.32; 
-    
+    const acidDosing = deficitP / 0.32;
+
     // Option 2: Urea + DAP
-    const dapDosing = deficitP / 0.46 / 0.44; 
+    const dapDosing = deficitP / 0.46 / 0.44;
     const nFromDap = dapDosing * 0.18;
     const remainingNDeficit = Math.max(0, deficitN - nFromDap);
     const ureaWithDapDosing = remainingNDeficit / 0.46;
 
-    const calcTank = (kg) => Math.max(0.1, Math.ceil((kg / 0.1 / 1000) * 100) / 100); 
+    const calcTank = (kg) => Math.max(0.1, Math.ceil((kg / 0.1 / 1000) * 100) / 100);
 
     setNutrientResults({
       codLoadKgDay,
@@ -194,33 +196,27 @@ const CalculatorsContent = () => {
           <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 inline-flex flex-wrap gap-2 justify-center">
             <button
               onClick={() => setActiveTab('biogas')}
-              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
-                activeTab === 'biogas' 
-                  ? 'bg-emerald-600 text-white shadow-md' 
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${activeTab === 'biogas'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-600 hover:bg-slate-50'
+                }`}
             >
               <Zap className="w-4 h-4" />
               <span>Biogas Generator</span>
             </button>
             <button
               onClick={() => setActiveTab('nutrient')}
-              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
-                activeTab === 'nutrient' 
-                  ? 'bg-emerald-600 text-white shadow-md' 
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${activeTab === 'nutrient'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-600 hover:bg-slate-50'
+                }`}
             >
               <Droplets className="w-4 h-4" />
               <span>Nutrient Dosing</span>
             </button>
             <button
-              onClick={() => setActiveTab('proposal')}
-              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
-                activeTab === 'proposal' 
-                  ? 'bg-emerald-600 text-white shadow-md' 
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
+              onClick={() => navigate('/proposal-tool')}
+              className="px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 text-slate-600 hover:bg-slate-50"
             >
               <FileText className="w-4 h-4" />
               <span>Proposal Generator</span>
@@ -236,13 +232,13 @@ const CalculatorsContent = () => {
               className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100"
             >
               {/* Biogas Content */}
-               <div className="p-8 grid md:grid-cols-2 gap-8">
+              <div className="p-8 grid md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <h3 className="text-xl font-bold text-slate-900 flex items-center">
                     <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">1</span>
                     Input Parameters
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Influent Flow Rate</label>
@@ -251,7 +247,7 @@ const CalculatorsContent = () => {
                           type="number"
                           placeholder="e.g. 100"
                           value={biogasInputs.flow}
-                          onChange={(e) => setBiogasInputs({...biogasInputs, flow: e.target.value})}
+                          onChange={(e) => setBiogasInputs({ ...biogasInputs, flow: e.target.value })}
                           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                         />
                         <span className="absolute right-3 top-2 text-sm text-slate-400">m³/hr</span>
@@ -265,7 +261,7 @@ const CalculatorsContent = () => {
                           type="number"
                           placeholder="e.g. 5000"
                           value={biogasInputs.scod}
-                          onChange={(e) => setBiogasInputs({...biogasInputs, scod: e.target.value})}
+                          onChange={(e) => setBiogasInputs({ ...biogasInputs, scod: e.target.value })}
                           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                         />
                         <span className="absolute right-3 top-2 text-sm text-slate-400">mg/l</span>
@@ -280,7 +276,7 @@ const CalculatorsContent = () => {
                           placeholder="e.g. 85"
                           max="100"
                           value={biogasInputs.efficiency}
-                          onChange={(e) => setBiogasInputs({...biogasInputs, efficiency: e.target.value})}
+                          onChange={(e) => setBiogasInputs({ ...biogasInputs, efficiency: e.target.value })}
                           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                         />
                         <span className="absolute right-3 top-2 text-sm text-slate-400">%</span>
@@ -291,7 +287,7 @@ const CalculatorsContent = () => {
                       <label className="block text-sm font-medium text-slate-700 mb-1">Compare Savings With</label>
                       <select
                         value={biogasInputs.fuelType}
-                        onChange={(e) => setBiogasInputs({...biogasInputs, fuelType: e.target.value})}
+                        onChange={(e) => setBiogasInputs({ ...biogasInputs, fuelType: e.target.value })}
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white"
                       >
                         {Object.entries(FUELS).map(([key, fuel]) => (
@@ -335,10 +331,10 @@ const CalculatorsContent = () => {
                       <div className="bg-emerald-900 text-emerald-50 p-4 rounded-lg">
                         <div className="flex items-start space-x-3">
                           <div className="mt-0.5">
-                             <p className="text-sm font-medium text-emerald-200">Potential {biogasResults.fuelName} Savings</p>
-                             <p className="text-2xl font-bold text-white">
-                               {biogasResults.fuelSavings.toFixed(1)} {biogasResults.fuelUnit}/day
-                             </p>
+                            <p className="text-sm font-medium text-emerald-200">Potential {biogasResults.fuelName} Savings</p>
+                            <p className="text-2xl font-bold text-white">
+                              {biogasResults.fuelSavings.toFixed(1)} {biogasResults.fuelUnit}/day
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -356,13 +352,13 @@ const CalculatorsContent = () => {
               className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100"
             >
               {/* Nutrient Content */}
-               <div className="p-8 grid md:grid-cols-2 gap-8">
+              <div className="p-8 grid md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <h3 className="text-xl font-bold text-slate-900 flex items-center">
                     <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3">1</span>
                     Process Parameters
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Flow Rate</label>
@@ -371,7 +367,7 @@ const CalculatorsContent = () => {
                           type="number"
                           placeholder="e.g. 50"
                           value={nutrientInputs.flow}
-                          onChange={(e) => setNutrientInputs({...nutrientInputs, flow: e.target.value})}
+                          onChange={(e) => setNutrientInputs({ ...nutrientInputs, flow: e.target.value })}
                           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                         />
                         <span className="absolute right-3 top-2 text-sm text-slate-400">m³/hr</span>
@@ -386,7 +382,7 @@ const CalculatorsContent = () => {
                             type="number"
                             placeholder="e.g. 2000"
                             value={nutrientInputs.scod}
-                            onChange={(e) => setNutrientInputs({...nutrientInputs, scod: e.target.value})}
+                            onChange={(e) => setNutrientInputs({ ...nutrientInputs, scod: e.target.value })}
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         </div>
@@ -399,7 +395,7 @@ const CalculatorsContent = () => {
                             placeholder="e.g. 85"
                             max="100"
                             value={nutrientInputs.efficiency}
-                            onChange={(e) => setNutrientInputs({...nutrientInputs, efficiency: e.target.value})}
+                            onChange={(e) => setNutrientInputs({ ...nutrientInputs, efficiency: e.target.value })}
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         </div>
@@ -414,7 +410,7 @@ const CalculatorsContent = () => {
                             type="number"
                             placeholder="e.g. 10"
                             value={nutrientInputs.nh4}
-                            onChange={(e) => setNutrientInputs({...nutrientInputs, nh4: e.target.value})}
+                            onChange={(e) => setNutrientInputs({ ...nutrientInputs, nh4: e.target.value })}
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         </div>
@@ -426,7 +422,7 @@ const CalculatorsContent = () => {
                             type="number"
                             placeholder="e.g. 2"
                             value={nutrientInputs.po4}
-                            onChange={(e) => setNutrientInputs({...nutrientInputs, po4: e.target.value})}
+                            onChange={(e) => setNutrientInputs({ ...nutrientInputs, po4: e.target.value })}
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         </div>
@@ -488,7 +484,7 @@ const CalculatorsContent = () => {
                           <div>
                             <p className="text-xs text-slate-500">Urea Dosing</p>
                             <p className="font-bold text-emerald-700">{nutrientResults.opt2.urea.toFixed(1)} kg/day</p>
-                             <p className="text-xs text-slate-400 mt-1">Tank: {nutrientResults.opt2.ureaTank} m³</p>
+                            <p className="text-xs text-slate-400 mt-1">Tank: {nutrientResults.opt2.ureaTank} m³</p>
                           </div>
                           <div>
                             <p className="text-xs text-slate-500">DAP Dosing</p>
@@ -505,7 +501,7 @@ const CalculatorsContent = () => {
           )}
 
           {activeTab === 'proposal' && (
-             <ProposalTabContent />
+            <ProposalTabContent />
           )}
         </div>
       </div>

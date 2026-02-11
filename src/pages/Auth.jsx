@@ -79,6 +79,8 @@ const Auth = () => {
     // url?mode=login -> 'client-login'
     // url?mode=admin -> 'admin-login'
     const initialModeParam = searchParams.get('mode');
+    const redirectPath = searchParams.get('redirect'); // Get redirect path
+
     const getInitialMode = () => {
         if (initialModeParam === 'login') return 'client-login';
         if (initialModeParam === 'admin') return 'admin-login';
@@ -146,7 +148,12 @@ const Auth = () => {
             if (isRoleAdmin || isEmailAdmin) {
                 navigate('/admin');
             } else {
-                navigate('/');
+                // If there's a specific redirect path, go there. Otherwise default to Client Profile for clients.
+                if (redirectPath) {
+                    navigate(redirectPath);
+                } else {
+                    navigate('/client-profile');
+                }
             }
         } else {
             console.error("Login Error:", result.error);

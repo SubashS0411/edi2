@@ -496,7 +496,10 @@ const Step2 = ({
   useEffect(() => {
     if (clientInfo.anaerobicBODLoad && performanceResults) {
       // 1. Aeration Tank Basic Calcs
-      const anaBODLoad = parseFloat(clientInfo.anaerobicBODLoad) || 0;
+      // Use live inputs from Step 2 if available, otherwise fallback to potentially stale clientInfo
+      const anaFlow = parseFloat(performanceSpecs?.anaFlow || clientInfo.anaerobicFlow || 0);
+      const anaFeedBOD = parseFloat(performanceSpecs?.anaFeedBOD || clientInfo.anaerobicBOD || 0);
+      const anaBODLoad = (anaFlow * anaFeedBOD) / 1000; // kg/day
 
       // Use dynamic efficiency from guarantees if available, else fallback
       const efficiency = parseFloat(guarantees?.anaerobicBODEff || performanceSpecs?.anaBODEff || 80);
@@ -591,6 +594,9 @@ const Step2 = ({
     }
   }, [
     clientInfo.anaerobicBODLoad,
+    performanceSpecs?.anaFlow,
+    performanceSpecs?.anaFeedBOD,
+    performanceSpecs?.anaBODEff,
     performanceResults?.kgBODRemovedAna,
     aerationTank.fmRatio,
     aerationTank.mlss,
