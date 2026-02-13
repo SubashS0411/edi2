@@ -148,8 +148,10 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
           // Priority 1: Custom Field Options
           if (fieldOptions && fieldOptions[key]) {
             const UNIT_MAP_SELECT = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', qty: 'Nos', hpPumpQty: 'Nos', airCompQty: 'Nos' };
+            const SELECT_LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)' };
+            const selectOverrideKey = `${name}__${key}`;
             const rawSelectLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-            const selectLabel = UNIT_MAP_SELECT[key] ? `${rawSelectLabel} (${UNIT_MAP_SELECT[key]})` : rawSelectLabel;
+            const selectLabel = SELECT_LABEL_OVERRIDES[selectOverrideKey] || (UNIT_MAP_SELECT[key] ? `${rawSelectLabel} (${UNIT_MAP_SELECT[key]})` : rawSelectLabel);
             return (
               <SelectField
                 key={key}
@@ -189,8 +191,11 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
           }
 
           const UNIT_MAP = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', inletTSS: 'mg/L', outletTSS: 'mg/L', qty: 'Nos', hpPumpCapacity: 'm³/hr', hpPumpHead: 'm', hpPumpQty: 'Nos', airCompCapacity: 'CFM', airCompPressure: 'Bar', airCompQty: 'Nos' };
+          // Label overrides for specific card + field combinations
+          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)' };
+          const overrideKey = `${name}__${key}`;
           const rawLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-          const label = UNIT_MAP[key] ? `${rawLabel} (${UNIT_MAP[key]})` : rawLabel;
+          const label = LABEL_OVERRIDES[overrideKey] || (UNIT_MAP[key] ? `${rawLabel} (${UNIT_MAP[key]})` : rawLabel);
           // Read-only logic preserved just in case
           const isReadOnly = key === 'qty' && name.includes('Surface Aerators');
 
@@ -845,7 +850,7 @@ const Step2 = ({
             }}
           />
 
-          <EquipmentCard name="Biomass Holding Tank" data={biomassHoldingTank} onChange={setBiomassHoldingTank} />
+          <EquipmentCard name="Biomass Holding Tank" data={biomassHoldingTank} onChange={setBiomassHoldingTank} fieldOptions={{ capacity: Array.from({ length: 8 }, (_, i) => ((i + 1) * 50).toString()) }} />
         </>
       )}
 
