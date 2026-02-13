@@ -241,9 +241,9 @@ const SludgeHandlingSection = ({
   const AGITATOR_MOC_OPTIONS = ['MS', 'SS', 'CI', 'Aluminum'];
   const TANK_TYPE_OPTIONS = ['Vertical', 'Horizontal', 'Conical', 'Cylindrical'];
   const AGITATOR_TYPES = ['Paddle', 'Turbine', 'Propeller'];
-  const PUMP_MAKE_OPTIONS = ['Hydroprokav/Netzsch/EQT', 'MiltonRoy/PROMINENT/EQT'];
+  const PUMP_MAKE_OPTIONS = ['Hydroprokav/Netzsch/EQT', 'Milton Roy/PROMINENT/EQT'];
   const PUMP_MOC_OPTIONS = ['CI/Nitrile Rubber/SS', 'PP'];
-  const PUMP_TYPE_OPTIONS = ['Positive Displacement', 'Centrifugal', 'Peristaltic', 'Other'];
+  const PUMP_TYPE_OPTIONS = ['Positive Displacement', 'Diaphragm', 'Centrifugal', 'Peristaltic', 'Other'];
 
   const DECANTER_MAKE_OPTIONS = ['Alfa Laval', 'Hilton', 'EQT'];
   const SCREW_PRESS_MAKE_OPTIONS = ['SNP', 'Chemi Science', 'EQT'];

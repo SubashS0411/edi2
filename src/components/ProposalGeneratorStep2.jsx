@@ -280,6 +280,7 @@ const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientIn
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Pump</p>
           <InputField label="Capacity (LPH)" value={data.pump.capacity} onChange={v => handleChange('pump', 'capacity', v)} />
           <SelectField label="Head (m)" value={data.pump.head} onChange={v => handleChange('pump', 'head', v)} options={Array.from({ length: 21 }, (_, i) => (10 + i).toString())} />
+          <InputField label="Make" value={data.pump.make} onChange={v => handleChange('pump', 'make', v)} />
           <SelectField label="Type" value={data.pump.type} onChange={v => handleChange('pump', 'type', v)} options={['Positive Displacement', 'Diaphragm']} />
           <SelectField label="MOC" value={data.pump.moc} onChange={v => handleChange('pump', 'moc', v)} options={['PP', 'SS316', 'SS304', 'CI', 'Nitrile rubber', 'KCI/SS304/Nitrile Rubber']} />
           <SelectField label="Qty (Nos)" value={data.pump.qty} onChange={v => handleChange('pump', 'qty', v)} options={qtyOptions} />
