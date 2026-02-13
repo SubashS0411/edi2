@@ -222,30 +222,22 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
 
 const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientInputs, setNutrientInputs }) => {
   const handleChange = (section, field, value) => {
-    onChange({
+    const newData = {
       ...data,
       [section]: { ...data[section], [field]: value }
-    });
+    };
+
+    // Auto-sync Agitator capacity from Tank capacity
+    if (section === 'tank' && field === 'capacity' && newData.agitator) {
+      newData.agitator = { ...newData.agitator, capacity: `For ${value}L` };
+    }
+
+    onChange(newData);
   };
 
   const toggleRequired = () => {
     const newData = { ...data, required: !data.required };
     onChange(newData);
-  };
-
-  const renderNutrientSection = () => {
-    if (name.includes('Urea')) {
-      return (
-        <div className="bg-emerald-50 border border-emerald-200 rounded p-3 mb-4">
-          <div className="text-xs font-bold text-emerald-800 mb-2 uppercase">Urea Requirement Calculation</div>
-          <div className="grid grid-cols-2 gap-4">
-            <InputField label="N Required (kg/day)" value={nutrientInputs?.nRequired || ''} onChange={v => setNutrientInputs(prev => ({ ...prev, nRequired: v, ureaRequired: (parseFloat(v || 0) / 0.46).toFixed(2) }))} />
-            <InputField label="Required Urea (kg/day)" value={nutrientInputs?.ureaRequired || ''} onChange={v => setNutrientInputs(prev => ({ ...prev, ureaRequired: v }))} />
-          </div>
-        </div>
-      );
-    }
-    return null;
   };
 
   if (!data.required) {
@@ -259,6 +251,8 @@ const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientIn
     );
   }
 
+  const qtyOptions = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
+
   return (
     <div className="border border-emerald-100 rounded-lg p-4 mb-4 bg-white shadow-sm">
       <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100 gap-2">
@@ -270,7 +264,7 @@ const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientIn
           </Button>
         </div>
       </div>
-      {renderNutrientSection()}
+
       {calculatedValues && (
         <div className="bg-blue-50 border border-blue-100 rounded p-3 mb-4 text-sm text-blue-900 grid grid-cols-2 gap-4">
           {Object.entries(calculatedValues).map(([key, val]) => (
@@ -285,16 +279,16 @@ const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientIn
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Pump</p>
           <InputField label="Capacity (LPH)" value={data.pump.capacity} onChange={v => handleChange('pump', 'capacity', v)} />
-          <InputField label="Head (m)" value={data.pump.head} onChange={v => handleChange('pump', 'head', v)} />
+          <SelectField label="Head (m)" value={data.pump.head} onChange={v => handleChange('pump', 'head', v)} options={Array.from({ length: 21 }, (_, i) => (10 + i).toString())} />
           <SelectField label="Type" value={data.pump.type} onChange={v => handleChange('pump', 'type', v)} options={['Positive Displacement', 'Diaphragm']} />
           <SelectField label="MOC" value={data.pump.moc} onChange={v => handleChange('pump', 'moc', v)} options={['PP', 'SS316', 'SS304', 'CI', 'Nitrile rubber', 'KCI/SS304/Nitrile Rubber']} />
-          <InputField label="Qty (Nos)" value={data.pump.qty} onChange={v => handleChange('pump', 'qty', v)} />
+          <SelectField label="Qty (Nos)" value={data.pump.qty} onChange={v => handleChange('pump', 'qty', v)} options={qtyOptions} />
         </div>
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Tank</p>
           <InputField label="Capacity (Lit)" value={data.tank.capacity} onChange={v => handleChange('tank', 'capacity', v)} />
           <SelectField label="MOC" value={data.tank.moc} onChange={v => handleChange('tank', 'moc', v)} options={MOC_OPTIONS} />
-          <InputField label="Qty (Nos)" value={data.tank.qty} onChange={v => handleChange('tank', 'qty', v)} />
+          <SelectField label="Qty (Nos)" value={data.tank.qty} onChange={v => handleChange('tank', 'qty', v)} options={qtyOptions} />
         </div>
         {data.agitator && (
           <div className="space-y-2">
@@ -302,7 +296,7 @@ const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientIn
             <InputField label="Capacity" value={data.agitator.capacity} onChange={v => handleChange('agitator', 'capacity', v)} />
             <InputField label="RPM" value={data.agitator.rpm} onChange={v => handleChange('agitator', 'rpm', v)} />
             <SelectField label="MOC" value={data.agitator.moc} onChange={v => handleChange('agitator', 'moc', v)} options={['SS316', 'SS304', 'MS', 'MSRL']} />
-            <InputField label="Qty (Nos)" value={data.agitator.qty} onChange={v => handleChange('agitator', 'qty', v)} />
+            <SelectField label="Qty (Nos)" value={data.agitator.qty} onChange={v => handleChange('agitator', 'qty', v)} options={qtyOptions} />
           </div>
         )}
       </div>
