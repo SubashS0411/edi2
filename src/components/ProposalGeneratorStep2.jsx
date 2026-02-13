@@ -139,17 +139,21 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
         {Object.entries(data).map(([key, val]) => {
           // Filters
           if (['required', 'scope', 'selectedDiameter', 'selectedHeight', 'selectedSize', 'shape', 'height', 'width', 'airBlowerData', 'surfaceAeratorData', 'diffuserType', 'tankGeometry'].includes(key)) return null;
-          // Aeration calc fields filter
-          if (['bodLoad', 'hrt', 'fmRatio', 'mlss', 'dimension', 'capacity', 'bodEntering', 'hpRequired', 'kgO2Day', 'kgO2Hr', 'motorHP', 'selectedHP'].includes(key)) return null;
+          // Aeration calc fields filter (capacity only hidden for aeration-related cards)
+          if (['bodLoad', 'hrt', 'fmRatio', 'mlss', 'dimension', 'bodEntering', 'hpRequired', 'kgO2Day', 'kgO2Hr', 'motorHP', 'selectedHP'].includes(key)) return null;
+          if (key === 'capacity' && (name.includes('Aeration') || name.includes('Surface Aerators'))) return null;
 
           if (typeof val === 'object' && val !== null) return null;
 
           // Priority 1: Custom Field Options
           if (fieldOptions && fieldOptions[key]) {
+            const UNIT_MAP_SELECT = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', qty: 'Nos', hpPumpQty: 'Nos', airCompQty: 'Nos' };
+            const rawSelectLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            const selectLabel = UNIT_MAP_SELECT[key] ? `${rawSelectLabel} (${UNIT_MAP_SELECT[key]})` : rawSelectLabel;
             return (
               <SelectField
                 key={key}
-                label={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                label={selectLabel}
                 value={val}
                 onChange={v => handleChange(key, v)}
                 options={fieldOptions[key]}
@@ -171,7 +175,22 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
             );
           }
 
-          const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+          // Priority 3: Standard Qty Dropdown (1-10)
+          if (key === 'qty') {
+            return (
+              <SelectField
+                key={key}
+                label="Qty (Nos)"
+                value={val}
+                onChange={v => handleChange(key, v)}
+                options={Array.from({ length: 10 }, (_, i) => (i + 1).toString())}
+              />
+            );
+          }
+
+          const UNIT_MAP = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', inletTSS: 'mg/L', outletTSS: 'mg/L', qty: 'Nos', hpPumpCapacity: 'm³/hr', hpPumpHead: 'm', hpPumpQty: 'Nos', airCompCapacity: 'CFM', airCompPressure: 'Bar', airCompQty: 'Nos' };
+          const rawLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+          const label = UNIT_MAP[key] ? `${rawLabel} (${UNIT_MAP[key]})` : rawLabel;
           // Read-only logic preserved just in case
           const isReadOnly = key === 'qty' && name.includes('Surface Aerators');
 
@@ -258,15 +277,15 @@ const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientIn
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Pump</p>
           <InputField label="Capacity (LPH)" value={data.pump.capacity} onChange={v => handleChange('pump', 'capacity', v)} />
           <InputField label="Head (m)" value={data.pump.head} onChange={v => handleChange('pump', 'head', v)} />
-          <SelectField label="Type" value={data.pump.type} onChange={v => handleChange('pump', 'type', v)} options={['Diaphragm', 'Positive displacement pump', 'Centrifugal']} />
-          <SelectField label="MOC" value={data.pump.moc} onChange={v => handleChange('pump', 'moc', v)} options={['PP', 'SS316', 'SS304', 'CI', 'Nitrile rubber']} />
-          <InputField label="Qty" value={data.pump.qty} onChange={v => handleChange('pump', 'qty', v)} />
+          <SelectField label="Type" value={data.pump.type} onChange={v => handleChange('pump', 'type', v)} options={['Positive Displacement', 'Diaphragm']} />
+          <SelectField label="MOC" value={data.pump.moc} onChange={v => handleChange('pump', 'moc', v)} options={['PP', 'SS316', 'SS304', 'CI', 'Nitrile rubber', 'KCI/SS304/Nitrile Rubber']} />
+          <InputField label="Qty (Nos)" value={data.pump.qty} onChange={v => handleChange('pump', 'qty', v)} />
         </div>
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Tank</p>
           <InputField label="Capacity (Lit)" value={data.tank.capacity} onChange={v => handleChange('tank', 'capacity', v)} />
           <SelectField label="MOC" value={data.tank.moc} onChange={v => handleChange('tank', 'moc', v)} options={MOC_OPTIONS} />
-          <InputField label="Qty" value={data.tank.qty} onChange={v => handleChange('tank', 'qty', v)} />
+          <InputField label="Qty (Nos)" value={data.tank.qty} onChange={v => handleChange('tank', 'qty', v)} />
         </div>
         {data.agitator && (
           <div className="space-y-2">
@@ -274,7 +293,7 @@ const DosingSystemConfig = ({ name, data, onChange, calculatedValues, nutrientIn
             <InputField label="Capacity" value={data.agitator.capacity} onChange={v => handleChange('agitator', 'capacity', v)} />
             <InputField label="RPM" value={data.agitator.rpm} onChange={v => handleChange('agitator', 'rpm', v)} />
             <SelectField label="MOC" value={data.agitator.moc} onChange={v => handleChange('agitator', 'moc', v)} options={['SS316', 'SS304', 'MS', 'MSRL']} />
-            <InputField label="Qty" value={data.agitator.qty} onChange={v => handleChange('agitator', 'qty', v)} />
+            <InputField label="Qty (Nos)" value={data.agitator.qty} onChange={v => handleChange('agitator', 'qty', v)} />
           </div>
         )}
       </div>
@@ -494,19 +513,22 @@ const Step2 = ({
 
   // Aeration & Surface Aerator Calculations
   useEffect(() => {
-    if (clientInfo.anaerobicBODLoad && performanceResults) {
-      // 1. Aeration Tank Basic Calcs
-      // Use live inputs from Step 2 if available, otherwise fallback to potentially stale clientInfo
-      const anaFlow = parseFloat(performanceSpecs?.anaFlow || clientInfo.anaerobicFlow || 0);
-      const anaFeedBOD = parseFloat(performanceSpecs?.anaFeedBOD || clientInfo.anaerobicBOD || 0);
-      const anaBODLoad = (anaFlow * anaFeedBOD) / 1000; // kg/day
+    // Use live inputs from Step 2 performanceSpecs
+    const anaFlow = parseFloat(performanceSpecs?.anaFlow || 0);
+    const anaFeedBOD = parseFloat(performanceSpecs?.anaFeedBOD || 0);
+    const anaBODLoad = (anaFlow * anaFeedBOD) / 1000; // kg/day
+
+    // Only proceed if we have meaningful data
+    if (anaBODLoad > 0 || (clientInfo.anaerobicBODLoad && performanceResults)) {
+      // Use the larger of live calculation or static clientInfo
+      const effectiveBODLoad = anaBODLoad > 0 ? anaBODLoad : (parseFloat(clientInfo.anaerobicBODLoad) || 0);
 
       // Use dynamic efficiency from guarantees if available, else fallback
       const efficiency = parseFloat(guarantees?.anaerobicBODEff || performanceSpecs?.anaBODEff || 80);
 
       // Calculate entering BOD based on efficiency formula
-      const bodEntering = Math.max(0, anaBODLoad * (1 - efficiency / 100));
-      const removedBODAna = Math.max(0, anaBODLoad - bodEntering);
+      const bodEntering = Math.max(0, effectiveBODLoad * (1 - efficiency / 100));
+      const removedBODAna = Math.max(0, effectiveBODLoad - bodEntering);
 
       const fm = parseFloat(aerationTank.fmRatio) || 0.15;
       const mlss = parseFloat(aerationTank.mlss) || 3500;
@@ -558,7 +580,7 @@ const Step2 = ({
 
 
       // 3. Surface Aerator Calcs
-      const saResults = calculateSurfaceAeratorHP(anaBODLoad, removedBODAna);
+      const saResults = calculateSurfaceAeratorHP(effectiveBODLoad, removedBODAna);
 
       let motorConfig = { quantityRequired: 0, standbyMotors: 0, totalMotors: 0, motor_config_text: '-' };
       if (surfaceAeratorCalc.selectedHP) {
@@ -596,7 +618,14 @@ const Step2 = ({
     clientInfo.anaerobicBODLoad,
     performanceSpecs?.anaFlow,
     performanceSpecs?.anaFeedBOD,
+    performanceSpecs?.anaFeedSCOD,
     performanceSpecs?.anaBODEff,
+    performanceSpecs?.anaSCODEff,
+    performanceSpecs?.aeroFlow,
+    performanceSpecs?.aeroFeedBOD,
+    performanceSpecs?.aeroFeedSCOD,
+    performanceSpecs?.aeroBODEff,
+    performanceSpecs?.aeroSCODEff,
     performanceResults?.kgBODRemovedAna,
     aerationTank.fmRatio,
     aerationTank.mlss,
@@ -700,6 +729,54 @@ const Step2 = ({
           </div>
         </div>
       </div>
+
+      {/* Real-Time Calculated Results Panel */}
+      {performanceResults && (
+        <div className="border border-emerald-200 rounded-lg p-4 bg-gradient-to-br from-emerald-50 to-blue-50 mb-6 shadow-sm">
+          <h4 className="font-bold text-slate-800 mb-3 border-b border-emerald-200 pb-2 flex items-center">
+            <Activity className="w-4 h-4 mr-2 text-emerald-600" />
+            Real-Time Calculated Results
+          </h4>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Anaerobic Results */}
+            <div className="bg-white p-3 rounded border border-emerald-100">
+              <h5 className="font-bold text-sm text-emerald-800 mb-2">Anaerobic Results</h5>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-600">kg sCOD Removed/day</span>
+                  <span className="font-bold text-emerald-700 text-lg">{performanceResults.kgSCODRemovedAna || '0.00'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-600">kg BOD Removed/day</span>
+                  <span className="font-bold text-emerald-700 text-lg">{performanceResults.kgBODRemovedAna || '0.00'}</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-emerald-100 pt-2">
+                  <span className="text-xs font-semibold text-slate-700">Biogas Generation (Nm³/day)</span>
+                  <span className="font-bold text-amber-600 text-lg">{performanceResults.biogasGen || '0.00'}</span>
+                </div>
+              </div>
+            </div>
+            {/* Aerobic Results */}
+            <div className="bg-white p-3 rounded border border-blue-100">
+              <h5 className="font-bold text-sm text-blue-800 mb-2">Aerobic Results</h5>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-600">kg sCOD Removed/day</span>
+                  <span className="font-bold text-blue-700 text-lg">{performanceResults.kgSCODRemovedAero || '0.00'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-600">kg BOD Removed/day</span>
+                  <span className="font-bold text-blue-700 text-lg">{performanceResults.kgBODRemovedAero || '0.00'}</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-blue-100 pt-2">
+                  <span className="text-xs font-semibold text-slate-700">BOD Entering Aeration (kg/day)</span>
+                  <span className="font-bold text-orange-600 text-lg">{surfaceAeratorCalc.bodEntering || '0.00'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <SectionHeader title="Pre-Treatment & Screening" />
       <EquipmentCard name="Screens" data={screens} onChange={setScreens} />
@@ -882,9 +959,14 @@ const Step2 = ({
             )}
           </div>
 
-          {/* Air Blower Section */}
+          {/* Air Blower Section - Use dynamic calculated values */}
           <AirBlowerSection
-            initialBOD={clientInfo.anaerobicBODLoad}
+            initialBOD={(() => {
+              const anaFlow = parseFloat(performanceSpecs?.anaFlow || 0);
+              const anaFeedBOD = parseFloat(performanceSpecs?.anaFeedBOD || 0);
+              const dynamicLoad = (anaFlow * anaFeedBOD) / 1000;
+              return dynamicLoad > 0 ? dynamicLoad.toFixed(2) : (clientInfo.anaerobicBODLoad || '');
+            })()}
             initialBODRemoval={performanceResults?.kgBODRemovedAna}
             onDataChange={handleAirBlowerDataChange}
           />

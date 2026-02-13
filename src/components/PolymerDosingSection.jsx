@@ -126,7 +126,7 @@ const PolymerDosingSection = ({ data, setData, calculations }) => {
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Preparation Tank</p>
           <InputField label="Capacity (m³)" value={data.equipment.prepTank.capacity} onChange={v => handleEquipmentChange('prepTank', 'capacity', v)} />
           <SelectField label="MOC" value={data.equipment.prepTank.material} onChange={v => handleEquipmentChange('prepTank', 'material', v)} options={MOC_OPTIONS} required={true} />
-          <InputField label="Qty" value={data.equipment.prepTank.qty} onChange={v => handleEquipmentChange('prepTank', 'qty', v)} />
+          <InputField label="Qty (Nos)" value={data.equipment.prepTank.qty} onChange={v => handleEquipmentChange('prepTank', 'qty', v)} />
         </div>
 
         {/* Dosing Tank */}
@@ -134,23 +134,24 @@ const PolymerDosingSection = ({ data, setData, calculations }) => {
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Tank</p>
           <InputField label="Capacity (m³)" value={data.equipment.dosingTank.capacity} onChange={v => handleEquipmentChange('dosingTank', 'capacity', v)} />
           <SelectField label="MOC" value={data.equipment.dosingTank.material} onChange={v => handleEquipmentChange('dosingTank', 'material', v)} options={MOC_OPTIONS} required={true} />
-          <InputField label="Qty" value={data.equipment.dosingTank.qty} onChange={v => handleEquipmentChange('dosingTank', 'qty', v)} />
+          <InputField label="Qty (Nos)" value={data.equipment.dosingTank.qty} onChange={v => handleEquipmentChange('dosingTank', 'qty', v)} />
         </div>
 
         {/* Dosing Pumps */}
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Pumps</p>
           <InputField label="Capacity (LPH)" value={data.equipment.dosingPumps.capacity} onChange={v => handleEquipmentChange('dosingPumps', 'capacity', v)} />
-          <SelectField label="MOC" value={data.equipment.dosingPumps.material} onChange={v => handleEquipmentChange('dosingPumps', 'material', v)} options={['Standard', 'SS304', 'SS316', 'PP']} />
-          <InputField label="Qty" value={data.equipment.dosingPumps.qty} onChange={v => handleEquipmentChange('dosingPumps', 'qty', v)} />
+          <SelectField label="Type" value={data.equipment.dosingPumps.type} onChange={v => handleEquipmentChange('dosingPumps', 'type', v)} options={['Positive Displacement', 'Diaphragm']} />
+          <SelectField label="MOC" value={data.equipment.dosingPumps.material} onChange={v => handleEquipmentChange('dosingPumps', 'material', v)} options={['Standard', 'SS304', 'SS316', 'PP', 'KCI/SS304/Nitrile Rubber']} />
+          <InputField label="Qty (Nos)" value={data.equipment.dosingPumps.qty} onChange={v => handleEquipmentChange('dosingPumps', 'qty', v)} />
         </div>
 
-         {/* Prep Agitator */}
-         <div className="space-y-2">
+        {/* Prep Agitator */}
+        <div className="space-y-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Prep Agitator</p>
           <InputField label="Capacity" value={data.equipment.prepAgitator.capacity} onChange={v => handleEquipmentChange('prepAgitator', 'capacity', v)} />
           <SelectField label="MOC" value={data.equipment.prepAgitator.material} onChange={v => handleEquipmentChange('prepAgitator', 'material', v)} options={['SS316', 'SS304', 'MS', 'MSRL']} />
-          <InputField label="Qty" value={data.equipment.prepAgitator.qty} onChange={v => handleEquipmentChange('prepAgitator', 'qty', v)} />
+          <InputField label="Qty (Nos)" value={data.equipment.prepAgitator.qty} onChange={v => handleEquipmentChange('prepAgitator', 'qty', v)} />
         </div>
 
         {/* Dosing Agitator */}
@@ -158,7 +159,7 @@ const PolymerDosingSection = ({ data, setData, calculations }) => {
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Agitator</p>
           <InputField label="Capacity" value={data.equipment.dosingAgitator.capacity} onChange={v => handleEquipmentChange('dosingAgitator', 'capacity', v)} />
           <SelectField label="MOC" value={data.equipment.dosingAgitator.material} onChange={v => handleEquipmentChange('dosingAgitator', 'material', v)} options={['SS316', 'SS304', 'MS', 'MSRL']} />
-          <InputField label="Qty" value={data.equipment.dosingAgitator.qty} onChange={v => handleEquipmentChange('dosingAgitator', 'qty', v)} />
+          <InputField label="Qty (Nos)" value={data.equipment.dosingAgitator.qty} onChange={v => handleEquipmentChange('dosingAgitator', 'qty', v)} />
         </div>
       </div>
     </div>
