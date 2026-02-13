@@ -245,8 +245,8 @@ const SludgeHandlingSection = ({
   const PUMP_MOC_OPTIONS = ['CI/Nitrile Rubber/SS', 'PP'];
   const PUMP_TYPE_OPTIONS = ['Positive Displacement', 'Diaphragm', 'Centrifugal', 'Peristaltic', 'Other'];
 
-  const DECANTER_MAKE_OPTIONS = ['Alfa Laval', 'Hilton', 'EQT'];
-  const SCREW_PRESS_MAKE_OPTIONS = ['SNP', 'Chemi Science', 'EQT'];
+  const DECANTER_MAKE_OPTIONS = ['Alfa Laval/Hilton/EQT', 'Other'];
+  const SCREW_PRESS_MAKE_OPTIONS = ['SNP/Chemi Science/EQT', 'Other'];
 
   return (
     <div className="border border-amber-200 rounded-lg p-4 mb-6 bg-white shadow-sm animate-in fade-in duration-500">
@@ -424,11 +424,11 @@ const SludgeHandlingSection = ({
                     onChange={(v) => handleNestedChange('decanterSpecs', 'make', v)}
                     options={DECANTER_MAKE_OPTIONS}
                   />
-                  <InputField
-                    label="Quantity"
-                    type="number"
+                  <SelectField
+                    label="Quantity (Nos)"
                     value={data.decanterSpecs?.qty}
                     onChange={(v) => handleNestedChange('decanterSpecs', 'qty', v)}
+                    options={Array.from({ length: 10 }, (_, i) => (i + 1).toString())}
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -463,11 +463,11 @@ const SludgeHandlingSection = ({
                     onChange={(v) => handleNestedChange('screwPressSpecs', 'make', v)}
                     options={SCREW_PRESS_MAKE_OPTIONS}
                   />
-                  <InputField
-                    label="Quantity"
-                    type="number"
+                  <SelectField
+                    label="Quantity (Nos)"
                     value={data.screwPressSpecs?.qty}
                     onChange={(v) => handleNestedChange('screwPressSpecs', 'qty', v)}
+                    options={Array.from({ length: 10 }, (_, i) => (i + 1).toString())}
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-3">

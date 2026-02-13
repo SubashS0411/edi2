@@ -43,30 +43,30 @@ const SelectField = ({ label, value, onChange, options, disabled = false }) => (
 );
 
 const SpecsSection = ({ title, icon: Icon, children }) => (
-    <div className="border border-slate-200 rounded p-3 bg-white mb-4">
-        <div className="text-xs font-bold text-slate-700 uppercase mb-3 border-b pb-1 flex items-center">
-            {Icon && <Icon className="w-3 h-3 mr-2 text-indigo-600" />} {title}
-        </div>
-        <div className="space-y-3">
-            {children}
-        </div>
+  <div className="border border-slate-200 rounded p-3 bg-white mb-4">
+    <div className="text-xs font-bold text-slate-700 uppercase mb-3 border-b pb-1 flex items-center">
+      {Icon && <Icon className="w-3 h-3 mr-2 text-indigo-600" />} {title}
     </div>
+    <div className="space-y-3">
+      {children}
+    </div>
+  </div>
 );
 
 const FiltersSection = ({ data, setData }) => {
 
   const handleNestedChange = (parentField, field, value) => {
-      setData(prev => ({
-          ...prev,
-          [parentField]: {
-              ...prev[parentField],
-              [field]: value
-          }
-      }));
+    setData(prev => ({
+      ...prev,
+      [parentField]: {
+        ...prev[parentField],
+        [field]: value
+      }
+    }));
   };
 
-  const PUMP_MAKE_OPTIONS = ['Hydroprokav', 'Netzsch', 'EQT', 'Other'];
-  const PUMP_MOC_OPTIONS = ['CI', 'SS', 'Nitrile Rubber', 'Other'];
+  const PUMP_MAKE_OPTIONS = ['KSB/Johnson/Abirami/EQT', 'Other'];
+  const PUMP_MOC_OPTIONS = ['CI', 'SS', 'Nitrile Rubber', 'CI/SS304', 'Other'];
   const PUMP_TYPE_OPTIONS = ['Positive Displacement', 'Centrifugal', 'Peristaltic', 'Other'];
 
   return (
@@ -77,34 +77,34 @@ const FiltersSection = ({ data, setData }) => {
       </div>
 
       <div className="bg-slate-50 p-4 rounded-md border border-slate-200">
-          <SpecsSection title="Filter Feed Pump" icon={Settings}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <SelectField 
-                      label="Make" 
-                      value={data.filterFeedPump?.make} 
-                      onChange={(v) => handleNestedChange('filterFeedPump', 'make', v)} 
-                      options={PUMP_MAKE_OPTIONS} 
-                  />
-                  <SelectField 
-                      label="MOC" 
-                      value={data.filterFeedPump?.moc} 
-                      onChange={(v) => handleNestedChange('filterFeedPump', 'moc', v)} 
-                      options={PUMP_MOC_OPTIONS} 
-                  />
-                  <SelectField 
-                      label="Type" 
-                      value={data.filterFeedPump?.type} 
-                      onChange={(v) => handleNestedChange('filterFeedPump', 'type', v)} 
-                      options={PUMP_TYPE_OPTIONS} 
-                  />
-                  <InputField 
-                      label="Quantity" 
-                      type="number" 
-                      value={data.filterFeedPump?.qty} 
-                      onChange={(v) => handleNestedChange('filterFeedPump', 'qty', v)} 
-                  />
-              </div>
-          </SpecsSection>
+        <SpecsSection title="Filter Feed Pump" icon={Settings}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SelectField
+              label="Make"
+              value={data.filterFeedPump?.make}
+              onChange={(v) => handleNestedChange('filterFeedPump', 'make', v)}
+              options={PUMP_MAKE_OPTIONS}
+            />
+            <SelectField
+              label="MOC"
+              value={data.filterFeedPump?.moc}
+              onChange={(v) => handleNestedChange('filterFeedPump', 'moc', v)}
+              options={PUMP_MOC_OPTIONS}
+            />
+            <SelectField
+              label="Type"
+              value={data.filterFeedPump?.type}
+              onChange={(v) => handleNestedChange('filterFeedPump', 'type', v)}
+              options={PUMP_TYPE_OPTIONS}
+            />
+            <SelectField
+              label="Quantity (Nos)"
+              value={data.filterFeedPump?.qty}
+              onChange={(v) => handleNestedChange('filterFeedPump', 'qty', v)}
+              options={Array.from({ length: 10 }, (_, i) => (i + 1).toString())}
+            />
+          </div>
+        </SpecsSection>
       </div>
     </div>
   );

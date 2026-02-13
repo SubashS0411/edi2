@@ -353,8 +353,8 @@ const Step2 = ({
         prepAgitatorSpecs: prev.prepAgitatorSpecs || { type: 'Paddle', make: 'CEECONS/VERITO/EQT', qty: '1', moc: 'SS' },
         dosingAgitatorSpecs: prev.dosingAgitatorSpecs || { type: 'Paddle', make: 'CEECONS/VERITO/EQT', qty: '1', moc: 'SS' },
         dosingPumpSpecs: prev.dosingPumpSpecs || { make: 'Hydroprokav', moc: 'CI', qty: '2 1W+1S', type: 'Positive Displacement' },
-        decanterSpecs: prev.decanterSpecs || { make: 'Alfa Laval', qty: '1', mechanism: 'Decanter Centrifuge', moc: 'SS316 Screw', bowl: 'SS316' },
-        screwPressSpecs: prev.screwPressSpecs || { make: 'SNP', qty: '1', mechanism: 'Screw Press', moc: 'SS316 Screw', bowl: 'SS316' },
+        decanterSpecs: prev.decanterSpecs || { make: 'Alfa Laval/Hilton/EQT', qty: '1', mechanism: 'Decanter Centrifuge', moc: 'SS316 Screw', bowl: 'SS316' },
+        screwPressSpecs: prev.screwPressSpecs || { make: 'SNP/Chemi Science/EQT', qty: '1', mechanism: 'Screw Press', moc: 'SS316 Screw', bowl: 'SS316' },
         decanterRequired: prev.decanterRequired || false,
         screwPressRequired: prev.screwPressRequired || false,
         dewateringCapacityTons: prev.dewateringCapacityTons || '0.00',
@@ -442,7 +442,7 @@ const Step2 = ({
       if (prev.filterFeedPump) return prev;
       return {
         ...prev,
-        filterFeedPump: { make: 'Hydroprokav', moc: 'CI', type: 'Positive Displacement', qty: '1' }
+        filterFeedPump: { make: 'KSB/Johnson/Abirami/EQT', moc: 'CI', type: 'Positive Displacement', qty: '1' }
       };
     });
   }, []);
