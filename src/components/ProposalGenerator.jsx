@@ -933,9 +933,9 @@ const ProposalGenerator = () => {
     polymerConcentration: '0.1', // %
     equipment: {
       prepTank: { qty: '1', capacity: '', material: 'Select MOC', remarks: '' },
-      prepAgitator: { qty: '1', capacity: 'Standard', material: 'SS316', remarks: '' },
+      prepAgitator: { qty: '1', capacity: 'Standard', material: 'SS316', remarks: '', make: 'CEECONS/VERITO/EQT' },
       dosingTank: { qty: '1', capacity: '', material: 'Select MOC', remarks: '' },
-      dosingAgitator: { qty: '1', capacity: 'Standard', material: 'SS316', remarks: '' },
+      dosingAgitator: { qty: '1', capacity: 'Standard', material: 'SS316', remarks: '', make: 'CEECONS/VERITO/EQT' },
       dosingPumps: { qty: '2 (1W+1S)', capacity: '', material: 'Standard', remarks: '' }
     }
   });

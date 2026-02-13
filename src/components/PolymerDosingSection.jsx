@@ -150,6 +150,7 @@ const PolymerDosingSection = ({ data, setData, calculations }) => {
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Prep Agitator</p>
           <InputField label="Capacity" value={data.equipment.prepAgitator.capacity} onChange={v => handleEquipmentChange('prepAgitator', 'capacity', v)} />
+          <InputField label="Make" value={data.equipment.prepAgitator.make} onChange={v => handleEquipmentChange('prepAgitator', 'make', v)} />
           <SelectField label="MOC" value={data.equipment.prepAgitator.material} onChange={v => handleEquipmentChange('prepAgitator', 'material', v)} options={['SS316', 'SS304', 'MS', 'MSRL']} />
           <SelectField label="Qty (Nos)" value={data.equipment.prepAgitator.qty} onChange={v => handleEquipmentChange('prepAgitator', 'qty', v)} options={Array.from({ length: 10 }, (_, i) => (i + 1).toString())} />
         </div>
@@ -158,6 +159,7 @@ const PolymerDosingSection = ({ data, setData, calculations }) => {
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-1 mb-2">Dosing Agitator</p>
           <InputField label="Capacity" value={data.equipment.dosingAgitator.capacity} onChange={v => handleEquipmentChange('dosingAgitator', 'capacity', v)} />
+          <InputField label="Make" value={data.equipment.dosingAgitator.make} onChange={v => handleEquipmentChange('dosingAgitator', 'make', v)} />
           <SelectField label="MOC" value={data.equipment.dosingAgitator.material} onChange={v => handleEquipmentChange('dosingAgitator', 'material', v)} options={['SS316', 'SS304', 'MS', 'MSRL']} />
           <SelectField label="Qty (Nos)" value={data.equipment.dosingAgitator.qty} onChange={v => handleEquipmentChange('dosingAgitator', 'qty', v)} options={Array.from({ length: 10 }, (_, i) => (i + 1).toString())} />
         </div>

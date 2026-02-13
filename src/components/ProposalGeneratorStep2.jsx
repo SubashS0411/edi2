@@ -349,8 +349,8 @@ const Step2 = ({
         ...prev,
         prepTankSpecs: prev.prepTankSpecs || { moc: 'MS', make: '', qty: '1', type: 'Vertical' },
         dosingTankSpecs: prev.dosingTankSpecs || { moc: 'MS', make: '', qty: '1', type: 'Vertical' },
-        prepAgitatorSpecs: prev.prepAgitatorSpecs || { type: 'Paddle', make: '', qty: '1', moc: 'SS' },
-        dosingAgitatorSpecs: prev.dosingAgitatorSpecs || { type: 'Paddle', make: '', qty: '1', moc: 'SS' },
+        prepAgitatorSpecs: prev.prepAgitatorSpecs || { type: 'Paddle', make: 'CEECONS/VERITO/EQT', qty: '1', moc: 'SS' },
+        dosingAgitatorSpecs: prev.dosingAgitatorSpecs || { type: 'Paddle', make: 'CEECONS/VERITO/EQT', qty: '1', moc: 'SS' },
         dosingPumpSpecs: prev.dosingPumpSpecs || { make: 'Hydroprokav', moc: 'CI', qty: '2 1W+1S', type: 'Positive Displacement' },
         decanterSpecs: prev.decanterSpecs || { make: 'Alfa Laval', qty: '1', mechanism: 'Decanter Centrifuge', moc: 'SS316 Screw', bowl: 'SS316' },
         screwPressSpecs: prev.screwPressSpecs || { make: 'SNP', qty: '1', mechanism: 'Screw Press', moc: 'SS316 Screw', bowl: 'SS316' },
@@ -359,6 +359,57 @@ const Step2 = ({
         dewateringCapacityTons: prev.dewateringCapacityTons || '0.00',
         dewateringProcessingCapacityKgHr: prev.dewateringProcessingCapacityKgHr || '0.00'
       };
+    });
+  }, []);
+
+  // Initialize Default Agitator Make for Sludge Calculation Details
+  useEffect(() => {
+    setSludgeCalculationDetails(prev => {
+      const newPrep = { ...prev.prepAgitatorSpecs };
+      const newDosing = { ...prev.dosingAgitatorSpecs };
+      let updated = false;
+
+      if (!newPrep.make) {
+        newPrep.make = 'CEECONS/VERITO/EQT';
+        updated = true;
+      }
+      if (!newDosing.make) {
+        newDosing.make = 'CEECONS/VERITO/EQT';
+        updated = true;
+      }
+
+      if (updated) {
+        return {
+          ...prev,
+          prepAgitatorSpecs: newPrep,
+          dosingAgitatorSpecs: newDosing
+        };
+      }
+      return prev;
+    });
+  }, []);
+
+  // Initialize Default Agitator Make for Polymer Dosing System
+  useEffect(() => {
+    setDafPolyDosing(prev => {
+      // Create copies to modify
+      const newEquipment = { ...prev.equipment };
+      let updated = false;
+
+      if (!newEquipment.prepAgitator.make) {
+        newEquipment.prepAgitator = { ...newEquipment.prepAgitator, make: 'CEECONS/VERITO/EQT' };
+        updated = true;
+      }
+
+      if (!newEquipment.dosingAgitator.make) {
+        newEquipment.dosingAgitator = { ...newEquipment.dosingAgitator, make: 'CEECONS/VERITO/EQT' };
+        updated = true;
+      }
+
+      if (updated) {
+        return { ...prev, equipment: newEquipment };
+      }
+      return prev;
     });
   }, []);
 
