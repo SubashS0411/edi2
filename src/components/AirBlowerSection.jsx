@@ -30,7 +30,7 @@ const InputField = ({ label, value, onChange, placeholder, type = "text", disabl
   </div>
 );
 
-const SelectField = ({ label, value, onChange, options, disabled = false, required = false, error }) => (
+const SelectField = ({ label, value, onChange, options, disabled = false, required = false, error, placeholder = "Select...", unit = "" }) => (
   <div className="mb-3 relative group">
     <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center justify-between">
       {label} {required && <span className="text-red-500">*</span>}
@@ -44,8 +44,8 @@ const SelectField = ({ label, value, onChange, options, disabled = false, requir
         className={`w-full px-3 py-1.5 border ${error ? 'border-red-500' : (required && (!value || value === 'Select MOC') ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-white')} rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 
           ${disabled ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
       >
-        <option value="">Select Blower Size</option>
-        {options.map(opt => <option key={opt} value={opt}>{opt} Nm³/hr</option>)}
+        <option value="">{placeholder}</option>
+        {options.map(opt => <option key={opt} value={opt}>{opt} {unit}</option>)}
       </select>
     </div>
   </div>
@@ -177,24 +177,28 @@ const AirBlowerSection = ({ initialBOD, initialBODRemoval, onDataChange }) => {
               onChange={setSelectedBlowerSize}
               options={blowerSizeOptions}
               required
+              placeholder="Select Blower Size"
+              unit="m³/hr"
             />
 
-            <div className="grid grid-cols-2 gap-4 mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
               <SelectField
                 label="Head (m)"
                 value={head}
                 onChange={setHead}
                 options={headOptions}
+                placeholder="Select Head"
+                unit="m"
               />
               <div className="mb-3">
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Blower Capacity</label>
-                <div className="w-full px-3 py-1.5 border border-slate-300 bg-slate-100 rounded text-sm text-gray-700">
+                <div className="w-full px-3 py-1.5 border border-blue-200 bg-blue-50 rounded text-sm text-gray-700 font-medium">
                   {selectedBlowerSize || '-'} <span className="text-xs text-slate-500">m³/hr</span>
                 </div>
               </div>
               <div className="mb-3">
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Qty</label>
-                <div className="w-full px-3 py-1.5 border border-slate-300 bg-slate-100 rounded text-sm text-gray-700">
+                <div className="w-full px-3 py-1.5 border border-blue-200 bg-blue-50 rounded text-sm text-gray-700 font-medium">
                   {calculations.total_blowers > 0 ? calculations.total_blowers : '-'} <span className="text-xs text-slate-500">(Nos)</span>
                 </div>
               </div>

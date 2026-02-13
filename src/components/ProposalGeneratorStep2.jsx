@@ -152,7 +152,7 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
           // Priority 1: Custom Field Options
           if (fieldOptions && fieldOptions[key]) {
             const UNIT_MAP_SELECT = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', qty: 'Nos', hpPumpQty: 'Nos', airCompQty: 'Nos', swd: 'm' };
-            const SELECT_LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)' };
+            const SELECT_LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)', 'Air Blower__capacity': 'Capacity (m³/hr)' };
             const selectOverrideKey = `${name}__${key}`;
             const rawSelectLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
             const selectLabel = SELECT_LABEL_OVERRIDES[selectOverrideKey] || (UNIT_MAP_SELECT[key] ? `${rawSelectLabel} (${UNIT_MAP_SELECT[key]})` : rawSelectLabel);
@@ -196,7 +196,7 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
 
           const UNIT_MAP = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', inletTSS: 'mg/L', outletTSS: 'mg/L', qty: 'Nos', hpPumpCapacity: 'm³/hr', hpPumpHead: 'm', hpPumpQty: 'Nos', airCompCapacity: 'CFM', airCompPressure: 'Bar', airCompQty: 'Nos', totalAirReq: 'm³/hr', swd: 'm' };
           // Label overrides for specific card + field combinations
-          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)' };
+          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)', 'Air Blower__capacity': 'Capacity (m³/hr)' };
           const overrideKey = `${name}__${key}`;
           const rawLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
           const label = LABEL_OVERRIDES[overrideKey] || (UNIT_MAP[key] ? `${rawLabel} (${UNIT_MAP[key]})` : rawLabel);
@@ -683,6 +683,16 @@ const Step2 = ({
       capacity: data.selected_blower_size || prev.capacity
     }));
   };
+
+  // Sync Secondary Clarifier Mechanism Size
+  useEffect(() => {
+    if (secondaryClarifierTank.proposedDia) {
+      setSecondaryClarifierMech(prev => ({
+        ...prev,
+        size: `To suit ${secondaryClarifierTank.proposedDia}`
+      }));
+    }
+  }, [secondaryClarifierTank.proposedDia, setSecondaryClarifierMech]);
 
   const handleMotorHPSelect = (hp) => {
     setSurfaceAeratorCalc(prev => ({ ...prev, selectedHP: hp }));
