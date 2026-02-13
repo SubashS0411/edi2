@@ -196,7 +196,7 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
 
           const UNIT_MAP = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', inletTSS: 'mg/L', outletTSS: 'mg/L', qty: 'Nos', hpPumpCapacity: 'm³/hr', hpPumpHead: 'm', hpPumpQty: 'Nos', airCompCapacity: 'CFM', airCompPressure: 'Bar', airCompQty: 'Nos', totalAirReq: 'm³/hr', swd: 'm' };
           // Label overrides for specific card + field combinations
-          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)', 'Air Blower__capacity': 'Capacity (m³/hr)' };
+          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)', 'Air Blower__capacity': 'Capacity (m³/hr)', 'Primary Sludge Pump__capacity': 'Capacity (m³/hr)' };
           const overrideKey = `${name}__${key}`;
           const rawLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
           const label = LABEL_OVERRIDES[overrideKey] || (UNIT_MAP[key] ? `${rawLabel} (${UNIT_MAP[key]})` : rawLabel);
@@ -450,13 +450,18 @@ const Step2 = ({
     }
 
     // Sync Primary Clarifier Mechanism Size/Qty from Clarifier
-    if (primaryClarifier.capacity || primaryClarifier.qty) {
-      const needsUpdate = primaryClarifierMech.capacity !== primaryClarifier.dim || primaryClarifierMech.qty !== primaryClarifier.qty;
-      // Note: primaryClarifier 'dim' maps to 'capacity' (Size) for mech based on user request "Size - copy from primary clarifier dim"
-      // Actually primaryClarifier has 'dim' field? Let's check state. 
-      // State: primaryClarifier: { ..., dim: '', ... }
+    // Sync Primary Clarifier Mechanism Size/Qty from Clarifier
+    if (primaryClarifier.dim || primaryClarifier.qty) {
+      const newSize = primaryClarifier.dim ? `To Suit ${primaryClarifier.dim}` : 'To Suit';
+      const needsUpdate = primaryClarifierMech.size !== newSize || primaryClarifierMech.qty !== primaryClarifier.qty;
+
       if (needsUpdate) {
-        setPrimaryClarifierMech(prev => ({ ...prev, capacity: primaryClarifier.dim, qty: primaryClarifier.qty }));
+        setPrimaryClarifierMech(prev => ({
+          ...prev,
+          size: newSize,
+          qty: primaryClarifier.qty
+          // capacity left as is (or cleared manually if needed, but keeping simple)
+        }));
       }
     }
 
@@ -1058,7 +1063,15 @@ const Step2 = ({
               make: ['Indofab/Filsep/Smaart/EQT']
             }}
           />
-          <EquipmentCard name="Sludge Recirculation Pump" data={sludgeRecircPump} onChange={setSludgeRecircPump} />
+          <EquipmentCard
+            name="Sludge Recirculation Pump"
+            data={sludgeRecircPump}
+            onChange={setSludgeRecircPump}
+            fieldOptions={{
+              head: Array.from({ length: 21 }, (_, i) => (10 + i).toString()),
+              moc: ['CI', 'CI/SS304', 'SS304', 'SS316', 'PP']
+            }}
+          />
         </>
       )}
 
@@ -1089,7 +1102,14 @@ const Step2 = ({
               make: ['Indofab/Filsep/Smaart/EQT']
             }}
           />
-          <EquipmentCard name="Primary Sludge Pump" data={primarySludgePump} onChange={setPrimarySludgePump} />
+          <EquipmentCard
+            name="Primary Sludge Pump"
+            data={primarySludgePump}
+            onChange={setPrimarySludgePump}
+            fieldOptions={{
+              head: Array.from({ length: 21 }, (_, i) => (10 + i).toString())
+            }}
+          />
           <EquipmentCard name="Cooling System" data={coolingSystem} onChange={setCoolingSystem} />
         </>
       )}

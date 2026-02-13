@@ -916,13 +916,13 @@ const ProposalGenerator = () => {
   const [diffusers, setDiffusers] = useState({ required: false, type: 'Hydrodynamic', moc: 'PP', qty: '100', make: 'Gasion', scope: 'EDI' });
 
   const [secondaryClarifierTank, setSecondaryClarifierTank] = useState({ required: true, proposedDia: '', existingDia: '', swd: '3.5m', moc: 'RCC', qty: '1', scope: 'Client' });
-  const [secondaryClarifierMech, setSecondaryClarifierMech] = useState({ required: true, capacity: '', type: 'Centrally drive', moc: 'MSEP', qty: '1', scope: 'EDI' });
-  const [sludgeRecircPump, setSludgeRecircPump] = useState({ required: true, capacity: '', make: 'KSB/Johnson/Abirami/EQT', type: 'Centrifugal Semi-open', head: '15m', moc: 'CI', qty: '2 (1W+1S)', scope: 'EDI' });
+  const [secondaryClarifierMech, setSecondaryClarifierMech] = useState({ required: true, size: 'To Suit', capacity: '', type: 'Centrally drive', moc: 'MSEP', qty: '1', scope: 'EDI' });
+  const [sludgeRecircPump, setSludgeRecircPump] = useState({ required: true, capacity: '', make: 'KSB/Johnson/Abirami/EQT', type: 'Centrifugal Semi-open', head: '15', moc: 'CI', qty: '2 (1W+1S)', scope: 'EDI' });
   const [treatedWaterTank, setTreatedWaterTank] = useState({ required: true, capacity: '', moc: 'RCC', type: 'Vertical', qty: '1', scope: 'Client' });
   const [treatedWaterPump, setTreatedWaterPump] = useState({ required: true, capacity: '', make: 'KSB/Johnson/Abirami/EQT', head: '25m', type: 'Centrifugal Semi-open', moc: 'CI', qty: '2 (1W+1S)', scope: 'EDI' });
   const [primaryClarifier, setPrimaryClarifier] = useState({ required: true, capacity: '', dim: '', moc: 'RCC', qty: '1', inletTSS: '', outletTSS: '', scope: 'Client' });
-  const [primaryClarifierMech, setPrimaryClarifierMech] = useState({ required: true, capacity: '', moc: 'MSEP', type: 'Central driven', make: 'Indofab/EQT', scope: 'EDI' });
-  const [primarySludgePump, setPrimarySludgePump] = useState({ required: true, capacity: '', type: 'Centrifugal', make: 'KSB/Abirami/Johnson', head: '15m', qty: '2 (1W+1S)', scope: 'EDI' });
+  const [primaryClarifierMech, setPrimaryClarifierMech] = useState({ required: true, size: 'To Suit', capacity: '', moc: 'MSEP', type: 'Central driven', make: 'Indofab/EQT', scope: 'EDI' });
+  const [primarySludgePump, setPrimarySludgePump] = useState({ required: true, capacity: '', type: 'Centrifugal', make: 'KSB/Abirami/Johnson', head: '15', qty: '2 (1W+1S)', scope: 'EDI' });
   const [coolingSystem, setCoolingSystem] = useState({ required: true, capacity: '', make: 'Alfa laval/EQT', moc: 'SS304', tempIn: '', tempOut: '35', coolingWaterTemp: '32', coolingWaterFlow: '', qty: '2 (1W+1S)', scope: 'EDI' });
   const [sludgeSystem, setSludgeSystem] = useState({ required: true, totalCapacity: '', polyPrepTankCap: '', polyDosingTankCap: '', pumpType: '', scope: 'EDI' });
   const [daf, setDaf] = useState({ required: true, flow: '', inletTSS: '', outletTSS: '', tssRemovedTons: '', tssRemovedKg: '', make: 'Krofta/DAFTech/Ishan/Kpack', qty: '1', hpPumpCapacity: '64', hpPumpMake: 'KSB/Kirloskar/Johnson/Equivalent', hpPumpHead: '10', hpPumpMOC: 'CI/SS304', hpPumpType: 'Open Impeller/Centrifugal', hpPumpQty: '2 (1W+1S)', airCompCapacity: '12', airCompMake: 'Atlas Copco/Equivalent', airCompPressure: '6', airCompMOC: 'SS304', airCompQty: '2 (1W+1S)', scope: 'EDI' });
