@@ -138,17 +138,21 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
       <div className="grid md:grid-cols-2 gap-4">
         {Object.entries(data).map(([key, val]) => {
           // Filters
-          if (['required', 'scope', 'selectedDiameter', 'selectedHeight', 'selectedSize', 'shape', 'height', 'width', 'airBlowerData', 'surfaceAeratorData', 'diffuserType', 'tankGeometry'].includes(key)) return null;
-          // Aeration calc fields filter (capacity only hidden for aeration-related cards)
+          if (['required', 'scope', 'selectedDiameter', 'selectedHeight', 'selectedSize', 'height', 'width', 'airBlowerData', 'surfaceAeratorData', 'diffuserType', 'tankGeometry'].includes(key)) return null;
+          // Hide shape for everything except Aeration Tank
+          if (key === 'shape' && !name.includes('Aeration Tank (Hardware)')) return null;
+          if (key === 'existingDia' && name.includes('Secondary Clarifier Tank')) return null;
+
+          // Aeration calc fields filter (capacity only hidden for Surface Aerators now) -> Unhide it for the "likewise" request
           if (['bodLoad', 'hrt', 'fmRatio', 'mlss', 'dimension', 'bodEntering', 'hpRequired', 'kgO2Day', 'kgO2Hr', 'motorHP', 'selectedHP'].includes(key)) return null;
-          if (key === 'capacity' && (name.includes('Aeration') || name.includes('Surface Aerators'))) return null;
+          // if (key === 'capacity' && name.includes('Surface Aerators')) return null; // Removed filter
 
           if (typeof val === 'object' && val !== null) return null;
 
           // Priority 1: Custom Field Options
           if (fieldOptions && fieldOptions[key]) {
-            const UNIT_MAP_SELECT = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', qty: 'Nos', hpPumpQty: 'Nos', airCompQty: 'Nos' };
-            const SELECT_LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)' };
+            const UNIT_MAP_SELECT = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', qty: 'Nos', hpPumpQty: 'Nos', airCompQty: 'Nos', swd: 'm' };
+            const SELECT_LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)' };
             const selectOverrideKey = `${name}__${key}`;
             const rawSelectLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
             const selectLabel = SELECT_LABEL_OVERRIDES[selectOverrideKey] || (UNIT_MAP_SELECT[key] ? `${rawSelectLabel} (${UNIT_MAP_SELECT[key]})` : rawSelectLabel);
@@ -190,9 +194,9 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
             );
           }
 
-          const UNIT_MAP = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', inletTSS: 'mg/L', outletTSS: 'mg/L', qty: 'Nos', hpPumpCapacity: 'm³/hr', hpPumpHead: 'm', hpPumpQty: 'Nos', airCompCapacity: 'CFM', airCompPressure: 'Bar', airCompQty: 'Nos' };
+          const UNIT_MAP = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', inletTSS: 'mg/L', outletTSS: 'mg/L', qty: 'Nos', hpPumpCapacity: 'm³/hr', hpPumpHead: 'm', hpPumpQty: 'Nos', airCompCapacity: 'CFM', airCompPressure: 'Bar', airCompQty: 'Nos', totalAirReq: 'm³/hr', swd: 'm' };
           // Label overrides for specific card + field combinations
-          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)' };
+          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)' };
           const overrideKey = `${name}__${key}`;
           const rawLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
           const label = LABEL_OVERRIDES[overrideKey] || (UNIT_MAP[key] ? `${rawLabel} (${UNIT_MAP[key]})` : rawLabel);
@@ -571,8 +575,9 @@ const Step2 = ({
       setAerationTank(prev => ({
         ...prev,
         // Sync hardware specs
-        capacity: requiredVolume.toFixed(2), // "add capacity - copy from aeration tank design (m3)"
+        capacity: additionalVol, // "add capacity - copy from aeration tank design (m3)" -> Additional Needed
         qty: aerationTankGeometry.quantity.toString(), // "Qty - copy from tank geometry configuration"
+        shape: aerationTankGeometry.shape, // "likewise create shape box"
         tankGeometry: {
           existingVolume: aerationTankGeometry.existingVolume,
           additionalVolume: additionalVol,
@@ -612,6 +617,7 @@ const Step2 = ({
         ...prev,
         qty: motorConfig.totalMotors > 0 ? motorConfig.totalMotors.toString() : prev.qty,
         power: surfaceAeratorCalc.selectedHP || prev.power, // "Power - copy from surface aerator calculation"
+        capacity: saResults.hpRatingRequired ? saResults.hpRatingRequired : prev.capacity, // "likewise value comes from..."
         surfaceAeratorData: {
           ...saResults,
           selectedHP: surfaceAeratorCalc.selectedHP,
@@ -672,7 +678,9 @@ const Step2 = ({
       ...prev,
       airBlowerData: data,
       qty: data.total_blowers ? data.total_blowers.toString() : prev.qty,
-      totalAirReq: data.airRequirementPerHour || prev.totalAirReq
+      totalAirReq: data.airRequirementPerHour || prev.totalAirReq,
+      head: data.head || prev.head,
+      capacity: data.selected_blower_size || prev.capacity
     }));
   };
 
@@ -945,6 +953,18 @@ const Step2 = ({
               </div>
             </div>
 
+            {/* Aeration Tank Hardware Card (Auto-synced) */}
+            <div className="mt-4">
+              <EquipmentCard
+                name="Aeration Tank (Hardware)"
+                data={aerationTank}
+                onChange={setAerationTank}
+                fieldOptions={{
+                  shape: ['Rectangular', 'Square', 'Circular']
+                }}
+              />
+            </div>
+
             <div className="mb-3 relative group w-full md:w-1/2">
               <SelectField
                 label="Select Standard Motor HP"
@@ -1012,7 +1032,14 @@ const Step2 = ({
           <EquipmentCard name="Air Blower" data={airBlower} onChange={setAirBlower} />
 
           <SectionHeader title="Secondary Clarification" />
-          <EquipmentCard name="Secondary Clarifier Tank" data={secondaryClarifierTank} onChange={setSecondaryClarifierTank} />
+          <EquipmentCard
+            name="Secondary Clarifier Tank"
+            data={secondaryClarifierTank}
+            onChange={setSecondaryClarifierTank}
+            fieldOptions={{
+              swd: ['2.5', '3.0', '3.5', '4.0', '4.5', '5.0']
+            }}
+          />
           <EquipmentCard
             name="Secondary Clarifier Mechanism"
             data={secondaryClarifierMech}
