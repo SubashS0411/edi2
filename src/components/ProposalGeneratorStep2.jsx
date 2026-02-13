@@ -196,7 +196,7 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
 
           const UNIT_MAP = { capacity: 'm³', agitatorQuantity: 'Nos', power: 'kW', head: 'm', flow: 'm³', inletTSS: 'mg/L', outletTSS: 'mg/L', qty: 'Nos', hpPumpCapacity: 'm³/hr', hpPumpHead: 'm', hpPumpQty: 'Nos', airCompCapacity: 'CFM', airCompPressure: 'Bar', airCompQty: 'Nos', totalAirReq: 'm³/hr', swd: 'm' };
           // Label overrides for specific card + field combinations
-          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)', 'Air Blower__capacity': 'Capacity (m³/hr)', 'Primary Sludge Pump__capacity': 'Capacity (m³/hr)' };
+          const LABEL_OVERRIDES = { 'Biogas Flare__head': 'Height (m)', 'Surface Aerators (Hardware)__capacity': 'Capacity (HP)', 'Air Blower__capacity': 'Capacity (m³/hr)', 'Primary Sludge Pump__capacity': 'Capacity (m³/hr)', 'Cooling System__tempIn': 'Temp In (°C)', 'Cooling System__tempOut': 'Temp Out (°C)', 'Cooling System__coolingWaterTemp': 'Cooling Water Temp (°C)' };
           const overrideKey = `${name}__${key}`;
           const rawLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
           const label = LABEL_OVERRIDES[overrideKey] || (UNIT_MAP[key] ? `${rawLabel} (${UNIT_MAP[key]})` : rawLabel);
