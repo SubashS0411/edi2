@@ -961,8 +961,8 @@ const ProposalGenerator = () => {
 
   const [dosingSystems, setDosingSystems] = useState({
     'Urea': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'PP', make: 'Milton Roy/PROMINENT/EQT', qty: defaultPumpQty, scope: 'EDI' }, tank: { capacity: '500', type: 'Vertical', moc: 'Select MOC', make: 'Sintex/EQT', qty: '1', scope: 'EDI' }, agitator: { capacity: 'For 500L', type: 'Turbine', moc: 'SS316', make: 'Ceecons/Verito/EQT', qty: '1', rpm: '80-90', scope: 'EDI' } },
-    'Phosphoric Acid': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'PP', make: 'Miltonroy', qty: defaultPumpQty, scope: 'EDI' }, tank: { capacity: '500', type: 'Vertical', moc: 'Select MOC', make: 'Sintex/EQT', qty: '1', scope: 'EDI' }, agitator: null },
-    'DAP': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'PP', make: 'Miltonroy', qty: defaultPumpQty, scope: 'EDI' }, tank: { capacity: '500', type: 'Vertical', moc: 'Select MOC', make: 'Sintex/EQT', qty: '1', scope: 'EDI' }, agitator: { capacity: 'For 500L', type: 'Turbine', moc: 'SS316', make: 'Ceecons/Verito/EQT', qty: '1', rpm: '80-90', scope: 'EDI' } }, // New DAP System
+    'Phosphoric Acid': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'PP', make: 'Milton Roy/PROMINENT/EQT', qty: defaultPumpQty, scope: 'EDI' }, tank: { capacity: '500', type: 'Vertical', moc: 'Select MOC', make: 'Sintex/EQT', qty: '1', scope: 'EDI' }, agitator: null },
+    'DAP': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'PP', make: 'Milton Roy/PROMINENT/EQT', qty: defaultPumpQty, scope: 'EDI' }, tank: { capacity: '500', type: 'Vertical', moc: 'Select MOC', make: 'Sintex/EQT', qty: '1', scope: 'EDI' }, agitator: { capacity: 'For 500L', type: 'Turbine', moc: 'SS316', make: 'Ceecons/Verito/EQT', qty: '1', rpm: '80-90', scope: 'EDI' } }, // New DAP System
     'Caustic': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'SS316', make: 'Milton Roy/PROMINENT/EQT', qty: defaultPumpQty, scope: 'EDI' }, tank: { capacity: '500', type: 'Vertical', moc: 'MS', make: '', qty: '1', scope: 'EDI' }, agitator: { capacity: 'For 500L', type: 'Turbine', moc: 'SS316', make: 'Ceecons/Verito/EQT', qty: '1', rpm: '80-90', scope: 'EDI' }, prepTank: { volume: '200', moc: 'MS', agitatorRpm: '80-90', agitatorType: 'Turbine' } },
     'HCl': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'PP', make: 'Milton Roy/PROMINENT/EQT', qty: defaultPumpQty }, tank: { capacity: '500', type: 'Vertical', moc: 'Select MOC', make: 'Sintex/EQT', qty: '1', fumeAbsorption: 'Yes' }, agitator: null },
     'Micronutrients': { required: true, pump: { capacity: '10', head: '10', type: 'Diaphragm', moc: 'PP', make: 'Milton Roy/PROMINENT/EQT', qty: defaultPumpQty }, tank: { capacity: '500', type: 'Vertical', moc: 'Select MOC', make: 'Sintex/EQT', qty: '1' }, agitator: { capacity: 'For 500L', type: 'Turbine', moc: 'SS316', make: 'Ceecons/Verito/EQT', qty: '1', rpm: '80-90' } }
@@ -1194,8 +1194,8 @@ const ProposalGenerator = () => {
         const vlrVal = anaerobicFeedLoad / cap;
         const vlrFormatted = vlrVal.toFixed(2);
 
-        if (anaerobicTank.capacity !== capFormatted || anaerobicTank.vlr !== vlrFormatted || anaerobicTank.diameter !== dia.toString() || anaerobicTank.height !== height.toString()) {
-          setAnaerobicTank(prev => ({ ...prev, capacity: capFormatted, vlr: vlrFormatted, diameter: dia.toString(), height: height.toString() }));
+        if (anaerobicTank.capacity !== capFormatted || anaerobicTank.vlr !== vlrFormatted || anaerobicTank.diameter !== dia.toFixed(1) || anaerobicTank.height !== height.toFixed(1)) {
+          setAnaerobicTank(prev => ({ ...prev, capacity: capFormatted, vlr: vlrFormatted, diameter: dia.toFixed(1), height: height.toFixed(1) }));
         }
 
         if (standPipe.required) {

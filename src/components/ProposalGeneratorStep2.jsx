@@ -138,7 +138,7 @@ const EquipmentCard = ({ name, data, onChange, calculatedValues, fieldOptions })
       <div className="grid md:grid-cols-2 gap-4">
         {Object.entries(data).map(([key, val]) => {
           // Filters
-          if (['required', 'scope', 'selectedDiameter', 'selectedHeight', 'selectedSize', 'height', 'width', 'airBlowerData', 'surfaceAeratorData', 'diffuserType', 'tankGeometry'].includes(key)) return null;
+          if (['required', 'scope', 'selectedDiameter', 'selectedHeight', 'selectedSize', 'width', 'airBlowerData', 'surfaceAeratorData', 'diffuserType', 'tankGeometry'].includes(key)) return null;
           // Hide shape for everything except Aeration Tank
           if (key === 'shape' && !name.includes('Aeration Tank (Hardware)')) return null;
           if (key === 'existingDia' && name.includes('Secondary Clarifier Tank')) return null;

@@ -71,8 +71,8 @@ const AirBlowerSection = ({ initialBOD, initialBODRemoval, onDataChange }) => {
   // Generate blower size options: 100 to 20000 in steps of 100
   const blowerSizeOptions = Array.from({ length: 200 }, (_, i) => ((i + 1) * 100).toString());
 
-  // Generate Head options: 0.1 to 1.0 step 0.1
-  const headOptions = Array.from({ length: 10 }, (_, i) => ((i + 1) * 0.1).toFixed(1));
+  // Generate Head options: 0.1 to 10.0 step 0.1
+  const headOptions = Array.from({ length: 100 }, (_, i) => ((i + 1) * 0.1).toFixed(1));
 
   useEffect(() => {
     // 1. Calculate BOD per Hour
