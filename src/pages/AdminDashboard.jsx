@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Eye, EyeOff, ArrowLeft, Loader2, Upload, QrCode, Check, AlertTriangle, X, User, FileText, Image, Maximize2, Shield, Calendar, CreditCard, ChevronDown, LogOut } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Loader2, Upload, QrCode, Check, AlertTriangle, X, User, FileText, Image, Maximize2, Shield, Calendar, CreditCard, ChevronDown, LogOut, KeyRound, Mail, Lock } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import StatsOverview from '@/components/admin/StatsOverview';
@@ -11,7 +11,7 @@ import { getRegistrationFee, updateRegistrationFee } from '@/lib/settingsService
 import { checkAndSendReminders } from '@/lib/emailService';
 
 const AdminDashboard = () => {
-    const { user, handleRequest, getQRCode, updateQRCode, logout } = useAuth();
+    const { user, handleRequest, getQRCode, updateQRCode, logout, updateAdminCredentials } = useAuth();
     const navigate = useNavigate();
     const { toast } = useToast();
 
@@ -25,6 +25,13 @@ const AdminDashboard = () => {
     const [isSendingReminders, setIsSendingReminders] = useState(false);
 
     const [currentFee, setCurrentFee] = useState('69.00');
+
+    // --- Change Credentials State ---
+    const [credEmail, setCredEmail] = useState('');
+    const [credPassword, setCredPassword] = useState('');
+    const [credConfirm, setCredConfirm] = useState('');
+    const [showCredPassword, setShowCredPassword] = useState(false);
+    const [isUpdatingCreds, setIsUpdatingCreds] = useState(false);
 
     useEffect(() => {
         const loadFee = async () => {
@@ -101,13 +108,45 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleUpdateCredentials = async (e) => {
+        e.preventDefault();
+        if (credPassword && credPassword !== credConfirm) {
+            toast({ title: 'Password Mismatch', description: 'New password and confirmation do not match.', variant: 'destructive' });
+            return;
+        }
+        if (!credEmail && !credPassword) {
+            toast({ title: 'Nothing to Update', description: 'Please enter a new email or password.', variant: 'destructive' });
+            return;
+        }
+        setIsUpdatingCreds(true);
+        const result = await updateAdminCredentials({
+            newEmail: credEmail || undefined,
+            newPassword: credPassword || undefined,
+        });
+        setIsUpdatingCreds(false);
+        if (result.success) {
+            toast({
+                title: 'Credentials Updated',
+                description: credEmail
+                    ? 'Email updated — check your inbox to confirm the change.'
+                    : 'Password changed successfully.',
+                className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+            });
+            setCredEmail('');
+            setCredPassword('');
+            setCredConfirm('');
+        } else {
+            toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#050510] text-white p-6 sm:p-10 font-sans selection:bg-purple-500/30">
             {/* Ambient Background */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] mix-blend-screen animate-pulse" />
                 <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen animate-pulse delay-700" />
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 opacity-[0.03] mix-blend-overlay"></div>
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
             </div>
 
             <div className="max-w-[1400px] mx-auto space-y-12 relative z-10">
@@ -168,6 +207,101 @@ const AdminDashboard = () => {
                     <div className="relative bg-[#0A0A17]/80 backdrop-blur-xl rounded-3xl p-1 border border-white/5 overflow-hidden">
                         <StatsOverview requests={allRequests} />
                     </div>
+                </motion.div>
+
+                {/* Change Credentials Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-[#0f1121]/60 backdrop-blur-2xl rounded-3xl border border-white/5 overflow-hidden"
+                >
+                    <div className="p-6 border-b border-white/5 flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/10 rounded-lg">
+                            <KeyRound className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold">Change Credentials</h2>
+                            <p className="text-slate-400 text-xs">Update your admin email or password</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleUpdateCredentials} className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            {/* New Email */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <Mail className="w-3.5 h-3.5" /> New Email
+                                </label>
+                                <input
+                                    type="email"
+                                    value={credEmail}
+                                    onChange={e => setCredEmail(e.target.value)}
+                                    placeholder={user?.email || 'current@email.com'}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+                                />
+                                <p className="text-xs text-slate-500">Leave blank to keep current email</p>
+                            </div>
+
+                            {/* New Password */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5" /> New Password
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showCredPassword ? 'text' : 'password'}
+                                        value={credPassword}
+                                        onChange={e => setCredPassword(e.target.value)}
+                                        placeholder="Min. 6 characters"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCredPassword(v => !v)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                                    >
+                                        {showCredPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-slate-500">Leave blank to keep current password</p>
+                            </div>
+
+                            {/* Confirm Password */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5" /> Confirm Password
+                                </label>
+                                <input
+                                    type={showCredPassword ? 'text' : 'password'}
+                                    value={credConfirm}
+                                    onChange={e => setCredConfirm(e.target.value)}
+                                    placeholder="Re-enter new password"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+                                />
+                                {credPassword && credConfirm && credPassword !== credConfirm && (
+                                    <p className="text-xs text-red-400 flex items-center gap-1"><X className="w-3 h-3" /> Passwords do not match</p>
+                                )}
+                                {credPassword && credConfirm && credPassword === credConfirm && (
+                                    <p className="text-xs text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> Passwords match</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end">
+                            <Button
+                                type="submit"
+                                disabled={isUpdatingCreds}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                            >
+                                {isUpdatingCreds ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Updating...</>
+                                ) : (
+                                    <><KeyRound className="w-4 h-4 mr-2" /> Update Credentials</>
+                                )}
+                            </Button>
+                        </div>
+                    </form>
                 </motion.div>
 
                 {/* Main Content Grid */}

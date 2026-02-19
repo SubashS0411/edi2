@@ -184,7 +184,36 @@ export const AuthProvider = ({ children }) => {
 
   // --- Admin Functions ---
 
+  const updateAdminCredentials = useCallback(async ({ newEmail, newPassword }) => {
+    const updates = {};
+    if (newEmail) updates.email = newEmail;
+    if (newPassword) updates.password = newPassword;
 
+    if (Object.keys(updates).length === 0) {
+      return { success: false, error: 'No changes provided.' };
+    }
+
+    // 1. Update Supabase Auth (auth.users table)
+    const { data, error } = await supabase.auth.updateUser(updates);
+    if (error) return { success: false, error: error.message };
+
+    // 2. If email changed, also sync the profiles table so both stay consistent.
+    //    (auth.users has no built-in UPDATE trigger to profiles.email)
+    if (newEmail && data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ email: newEmail })
+        .eq('id', data.user.id);
+
+      if (profileError) {
+        console.warn('Auth email updated but profiles.email sync failed:', profileError.message);
+        // Return success because auth is updated; warn about the partial sync
+        return { success: true, user: data.user, warning: profileError.message };
+      }
+    }
+
+    return { success: true, user: data.user };
+  }, []);
 
   const getRequests = useCallback(async () => {
     // Fetch from profiles
@@ -279,19 +308,39 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
 
+  // --- Password Reset / Update ---
+
+  const resetPassword = useCallback(async (email) => {
+    const redirectUrl = `${window.location.origin}/update-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword) => {
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { success: false, error: error.message };
+    return { success: true, user: data.user };
+  }, []);
+
   const value = useMemo(() => ({
     user,
     loading,
     login,
     logout,
-    // New Exports
+    // Auth Helpers
     getQRCode,
     submitSignupRequest,
     updateQRCode,
     getRequests,
     handleRequest,
-    resendVerification
-  }), [user, loading, login, logout, getQRCode, submitSignupRequest, updateQRCode, getRequests, handleRequest]);
+    resendVerification,
+    updateAdminCredentials,
+    resetPassword,
+    updatePassword,
+  }), [user, loading, login, logout, getQRCode, submitSignupRequest, updateQRCode, getRequests, handleRequest, updateAdminCredentials, resetPassword, updatePassword]);
 
   // New Helper: Resend Verification
   async function resendVerification(email) {

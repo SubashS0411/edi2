@@ -38,12 +38,32 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- 4. Create Trigger
+-- 4. Create Trigger (INSERT: auto-create profile on signup)
 -- Drop first to allow replacement
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- 4b. Trigger Function: keep profiles.email in sync when auth.users.email is updated
+create or replace function public.handle_user_updated()
+returns trigger as $$
+begin
+  -- Only update profiles if the email actually changed
+  if new.email is distinct from old.email then
+    update public.profiles
+    set email = new.email
+    where id = new.id;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- 4c. Attach the UPDATE trigger to auth.users
+drop trigger if exists on_auth_user_updated on auth.users;
+create trigger on_auth_user_updated
+  after update on auth.users
+  for each row execute procedure public.handle_user_updated();
 
 -- 5. Create Policies (Permissions)
 
