@@ -1,0 +1,2 @@
+id,email,full_name,role,subscription_status,transaction_id,payment_proof_id,created_at,subscription_start,subscription_end,access_token,payment_proof_url,company_name,company_gst,company_address,company_phone,company_email,account_type,billing_address,city,state,zip,country,phone
+2bd5f642-058d-4c1e-b4c7-2c8f98ae35dc,md@edienv.com,Admin,admin,active,,,2026-01-27 17:38:17.975913+00,2026-01-27 17:38:17.975+00,2027-01-27 17:38:17.975+00,EDI-ADMIN,,Edienviro,,,,md@edienv.com,individual,,,,,,

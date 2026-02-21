@@ -3,15 +3,18 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Eye, EyeOff, ArrowLeft, Loader2, Upload, QrCode, Check, AlertTriangle, X, User, FileText, Image, Maximize2, Shield, Calendar, CreditCard, ChevronDown, LogOut, KeyRound, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Loader2, Upload, QrCode, Check, AlertTriangle, X, User, FileText, Image, Maximize2, Shield, Calendar, CreditCard, ChevronDown, LogOut, KeyRound, Mail, Lock, UserX, UserCheck, Ban, RotateCcw, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import StatsOverview from '@/components/admin/StatsOverview';
-import { getRegistrationFee, updateRegistrationFee } from '@/lib/settingsService';
+import { getRegistrationFee, updateRegistrationFee, getAdminEmail, getAdminPassword } from '@/lib/settingsService';
 import { checkAndSendReminders } from '@/lib/emailService';
 
+// Dynamic admin email — read from .env so it stays in sync when credentials are changed
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
+
 const AdminDashboard = () => {
-    const { user, handleRequest, getQRCode, updateQRCode, logout, updateAdminCredentials } = useAuth();
+    const { user, handleRequest, deleteUser, getQRCode, updateQRCode, logout, updateAdminCredentials, getAdminProfile } = useAuth();
     const navigate = useNavigate();
     const { toast } = useToast();
 
@@ -27,11 +30,28 @@ const AdminDashboard = () => {
     const [currentFee, setCurrentFee] = useState('69.00');
 
     // --- Change Credentials State ---
+    const [credDisplayName, setCredDisplayName] = useState('');
     const [credEmail, setCredEmail] = useState('');
     const [credPassword, setCredPassword] = useState('');
     const [credConfirm, setCredConfirm] = useState('');
     const [showCredPassword, setShowCredPassword] = useState(false);
     const [isUpdatingCreds, setIsUpdatingCreds] = useState(false);
+
+    // --- Live Admin Credentials (loaded from app_settings DB, NOT from .env) ---
+    // These are the CURRENT credentials as stored in the database.
+    // They update immediately after every successful credential change.
+    const [currentAdminEmail, setCurrentAdminEmail] = useState(import.meta.env.VITE_ADMIN_EMAIL || 'md@edienv.com');
+    const [currentAdminPassword, setCurrentAdminPassword] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [isLoadingCreds, setIsLoadingCreds] = useState(false);
+
+    // --- DB Verification State ---
+    const [dbProfile, setDbProfile] = useState(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+
+    // --- Per-user action loading state ---
+    const [actionLoadingId, setActionLoadingId] = useState(null);
+    const [deleteLoadingId, setDeleteLoadingId] = useState(null);
 
     useEffect(() => {
         const loadFee = async () => {
@@ -40,6 +60,16 @@ const AdminDashboard = () => {
         }
         loadFee();
     }, []);
+
+    // Loads live admin email + password from app_settings table.
+    // Called on mount and after every successful credential update.
+    const loadAdminCredentials = async () => {
+        setIsLoadingCreds(true);
+        const [email, password] = await Promise.all([getAdminEmail(), getAdminPassword()]);
+        setCurrentAdminEmail(email);
+        setCurrentAdminPassword(password);
+        setIsLoadingCreds(false);
+    };
 
     const fetchData = async () => {
         setLoadingData(true);
@@ -60,23 +90,52 @@ const AdminDashboard = () => {
             navigate('/signup');
             return;
         }
-        const role = user.user_metadata?.role;
-        if (role !== 'admin' && user.email !== 'md@edienviro.com') {
-            toast({ title: "Unauthorized", description: "Admin access required.", variant: "destructive" });
-            navigate('/');
-            return;
-        }
 
-        fetchData();
-        setQrUrl(getQRCode() || '');
+        // Admin guard — priority order:
+        //  1. profiles table role  (authoritative — works for manually-created accounts)
+        //  2. user_metadata.role   (works for accounts created via signUp with role option)
+        //  3. email match          (last resort fallback)
+        const verifyAndLoad = async () => {
+            const metaRole  = user.user_metadata?.role;
+            const emailMatch = user.email === ADMIN_EMAIL;
+
+            // Fast path: metadata or email already confirms admin
+            if (metaRole === 'admin' || emailMatch) {
+                fetchData();
+                loadAdminCredentials();
+                setQrUrl(getQRCode() || '');
+                return;
+            }
+
+            // Slow path: check profiles table (handles manually-created admin accounts)
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (profile?.role === 'admin') {
+                fetchData();
+                loadAdminCredentials();
+                setQrUrl(getQRCode() || '');
+            } else {
+                toast({ title: 'Unauthorized', description: 'Admin access required.', variant: 'destructive' });
+                navigate('/');
+            }
+        };
+
+        verifyAndLoad();
     }, [user, navigate, getQRCode]);
 
     const onHandleRequest = async (id, action, duration) => {
+        setActionLoadingId(id);
         const result = await handleRequest(id, action, duration);
+        setActionLoadingId(null);
         if (result.success) {
+            const labels = { approve: 'approved', reject: 'rejected', disable: 'deactivated', enable: 're-activated' };
             toast({
                 title: "Success",
-                description: `Request ${action}d successfully.`,
+                description: `Account ${labels[action] ?? action + 'd'} successfully.`,
                 className: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
             });
             fetchData();
@@ -86,6 +145,36 @@ const AdminDashboard = () => {
                 description: result.error,
                 variant: "destructive"
             });
+        }
+    };
+
+    const onDeactivateUser = (req) => {
+        if (!window.confirm(`Deactivate "${req.full_name || req.email}"?\nThis will revoke their access immediately.`)) return;
+        onHandleRequest(req.id, 'disable');
+    };
+
+    const onReactivateUser = (req) => {
+        if (!window.confirm(`Re-activate "${req.full_name || req.email}" for ${approvalDuration} month(s)?`)) return;
+        onHandleRequest(req.id, 'enable', approvalDuration);
+    };
+
+    const onRemoveUser = async (req) => {
+        if (!window.confirm(
+            `Permanently remove "${req.full_name || req.email}"?\n\nThis will delete all their data and cannot be undone.`
+        )) return;
+        setDeleteLoadingId(req.id);
+        const result = await deleteUser(req.id);
+        setDeleteLoadingId(null);
+        if (result.success) {
+            // Immediately remove from local state — no re-fetch needed
+            setAllRequests(prev => prev.filter(r => r.id !== req.id));
+            toast({
+                title: 'User Removed',
+                description: `${req.full_name || req.email} has been permanently deleted.`,
+                className: 'bg-rose-500/10 border-rose-500/20 text-rose-400',
+            });
+        } else {
+            toast({ title: 'Remove Failed', description: result.error, variant: 'destructive' });
         }
     };
 
@@ -114,29 +203,48 @@ const AdminDashboard = () => {
             toast({ title: 'Password Mismatch', description: 'New password and confirmation do not match.', variant: 'destructive' });
             return;
         }
-        if (!credEmail && !credPassword) {
-            toast({ title: 'Nothing to Update', description: 'Please enter a new email or password.', variant: 'destructive' });
+        if (!credEmail && !credPassword && !credDisplayName) {
+            toast({ title: 'Nothing to Update', description: 'Please enter a new username, email, or password.', variant: 'destructive' });
             return;
         }
         setIsUpdatingCreds(true);
         const result = await updateAdminCredentials({
             newEmail: credEmail || undefined,
             newPassword: credPassword || undefined,
+            newDisplayName: credDisplayName || undefined,
         });
         setIsUpdatingCreds(false);
         if (result.success) {
+            const changed = [];
+            if (credDisplayName) changed.push('username');
+            if (credEmail) changed.push('email');
+            if (credPassword) changed.push('password');
             toast({
                 title: 'Credentials Updated',
-                description: credEmail
-                    ? 'Email updated — check your inbox to confirm the change.'
-                    : 'Password changed successfully.',
+                description: `${changed.join(', ')} updated successfully.${credEmail ? ' Check your inbox to confirm the email change.' : ''
+                    }`,
                 className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
             });
+            setCredDisplayName('');
             setCredEmail('');
             setCredPassword('');
             setCredConfirm('');
+            // Refresh live credentials panel from DB and auto-verify
+            loadAdminCredentials();
+            handleVerifyInDatabase();
         } else {
             toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+        }
+    };
+
+    const handleVerifyInDatabase = async () => {
+        setIsVerifying(true);
+        const result = await getAdminProfile();
+        setIsVerifying(false);
+        if (result.success) {
+            setDbProfile(result);
+        } else {
+            toast({ title: 'Verification Failed', description: result.error, variant: 'destructive' });
         }
     };
 
@@ -222,12 +330,82 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold">Change Credentials</h2>
-                            <p className="text-slate-400 text-xs">Update your admin email or password</p>
+                            <p className="text-slate-400 text-xs">Update your admin username, email, or password</p>
                         </div>
                     </div>
 
+                    {/* Live Admin Credentials Panel — reads from app_settings DB */}
+                    <div className="mx-6 mt-2 mb-1 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <Shield className="w-4 h-4 text-indigo-400" />
+                                <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Current Active Credentials</span>
+                                {isLoadingCreds && (
+                                    <Loader2 className="w-3 h-3 text-indigo-400 animate-spin" />
+                                )}
+                            </div>
+
+                            {/* Live Email */}
+                            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg font-mono text-xs text-slate-300">
+                                <Mail className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                                <span className="truncate max-w-[200px]">{currentAdminEmail}</span>
+                            </div>
+
+                            {/* Live Password — masked by default, reveal on click */}
+                            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg font-mono text-xs text-slate-300">
+                                <KeyRound className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                                <span className="tracking-widest select-none">
+                                    {currentAdminPassword
+                                        ? (showCurrentPassword ? currentAdminPassword : '•'.repeat(currentAdminPassword.length))
+                                        : '••••••••'
+                                    }
+                                </span>
+                                {currentAdminPassword && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCurrentPassword(v => !v)}
+                                        className="ml-1.5 text-slate-500 hover:text-slate-300 transition-colors"
+                                        title={showCurrentPassword ? 'Hide password' : 'Reveal password'}
+                                    >
+                                        {showCurrentPassword
+                                            ? <EyeOff className="w-3 h-3" />
+                                            : <Eye className="w-3 h-3" />
+                                        }
+                                    </button>
+                                )}
+                            </div>
+
+                            <p className="text-[11px] text-slate-500 sm:ml-auto">
+                                Live from database — no <code className="bg-white/10 px-1 rounded">.env</code> changes needed after updates.
+                            </p>
+                        </div>
+
+                        {/* Shown only before first password has been saved via dashboard */}
+                        {!currentAdminPassword && (
+                            <p className="mt-2 text-[11px] text-amber-500/80 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3 h-3" />
+                                Password not yet stored in database. Enter a new password below — it will be saved dynamically.
+                            </p>
+                        )}
+                    </div>
+
                     <form onSubmit={handleUpdateCredentials} className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                            {/* New Username / Display Name */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5" /> Username
+                                </label>
+                                <input
+                                    type="text"
+                                    value={credDisplayName}
+                                    onChange={e => setCredDisplayName(e.target.value)}
+                                    placeholder={user?.user_metadata?.full_name || 'Display name'}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+                                />
+                                <p className="text-xs text-slate-500">Your display name in the system</p>
+                            </div>
+
                             {/* New Email */}
                             <div className="space-y-2">
                                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -288,7 +466,22 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        <div className="mt-6 flex justify-end">
+                        <div className="mt-6 flex flex-wrap justify-between items-center gap-3">
+                            {/* Verify button */}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleVerifyInDatabase}
+                                disabled={isVerifying}
+                                className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 rounded-xl px-6 py-2.5 font-semibold transition-all"
+                            >
+                                {isVerifying ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Fetching...</>
+                                ) : (
+                                    <><Shield className="w-4 h-4 mr-2" /> Verify in Database</>
+                                )}
+                            </Button>
+
                             <Button
                                 type="submit"
                                 disabled={isUpdatingCreds}
@@ -302,6 +495,53 @@ const AdminDashboard = () => {
                             </Button>
                         </div>
                     </form>
+
+                    {/* DB Verification Panel */}
+                    <AnimatePresence>
+                        {dbProfile && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="border-t border-white/5 overflow-hidden"
+                            >
+                                <div className="p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
+                                            <Check className="w-4 h-4" /> Live Database Record
+                                        </h3>
+                                        <button
+                                            onClick={() => setDbProfile(null)}
+                                            className="text-slate-500 hover:text-slate-300 transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                                            <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider">Username</p>
+                                            <p className="text-sm font-medium text-white truncate">{dbProfile.profile?.full_name || '—'}</p>
+                                        </div>
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                                            <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider">Email (Auth)</p>
+                                            <p className="text-sm font-medium text-white truncate">{dbProfile.authEmail || '—'}</p>
+                                        </div>
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                                            <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider">Email (Profiles)</p>
+                                            <p className="text-sm font-medium text-white truncate">{dbProfile.profile?.email || '—'}</p>
+                                        </div>
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                                            <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider">Role</p>
+                                            <p className="text-sm font-medium text-emerald-400 capitalize">{dbProfile.profile?.role || '—'}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-600 mt-3">
+                                        Password is not shown for security. Both <span className="text-slate-400">auth.users</span> and <span className="text-slate-400">profiles</span> tables are reflected above.
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
                 {/* Main Content Grid */}
@@ -355,7 +595,11 @@ const AdminDashboard = () => {
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.05 }}
-                                            className="group bg-slate-900/40 hover:bg-white/[0.03] border border-white/5 hover:border-indigo-500/20 rounded-2xl p-4 transition-all duration-200"
+                                            className={`group border rounded-2xl p-4 transition-all duration-200
+                                                ${req.subscription_status === 'disabled'
+                                                    ? 'bg-rose-950/20 border-rose-500/10 hover:border-rose-500/25'
+                                                    : 'bg-slate-900/40 hover:bg-white/[0.03] border-white/5 hover:border-indigo-500/20'
+                                                }`}
                                         >
                                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                                 {/* User Identity */}
@@ -374,6 +618,17 @@ const AdminDashboard = () => {
                                                             <div className={`w-2 h-2 rounded-full ${req.subscription_status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
                                                                 req.subscription_status === 'disabled' ? 'bg-red-500' : 'bg-amber-500'
                                                                 }`} />
+                                                            <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border
+                                                                ${req.subscription_status === 'active'
+                                                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                                    : req.subscription_status === 'disabled'
+                                                                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                                                        : req.subscription_status === 'rejected'
+                                                                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                                }`}>
+                                                                {req.subscription_status === 'disabled' ? 'Deactivated' : req.subscription_status}
+                                                            </span>
                                                         </div>
                                                         <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
                                                             <span>{req.email}</span>
@@ -394,25 +649,95 @@ const AdminDashboard = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Action Buttons for Pending Users */}
-                                                {req.subscription_status === 'pending' && (
-                                                    <div className="flex items-center gap-3 mt-4 md:mt-0">
+                                                {/* Action Buttons */}
+                                                <div className="flex items-center gap-2 mt-4 md:mt-0 flex-wrap">
+                                                    {/* Pending: Accept / Deny */}
+                                                    {req.subscription_status === 'pending' && (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => onHandleRequest(req.id, 'approve', approvalDuration)}
+                                                                disabled={actionLoadingId === req.id}
+                                                                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                                                size="sm"
+                                                            >
+                                                                {actionLoadingId === req.id
+                                                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    : <><Check className="w-4 h-4 mr-1.5" /> Accept</>
+                                                                }
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => onHandleRequest(req.id, 'reject')}
+                                                                disabled={actionLoadingId === req.id}
+                                                                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20"
+                                                                size="sm"
+                                                            >
+                                                                <X className="w-4 h-4 mr-1.5" /> Deny
+                                                            </Button>
+                                                        </>
+                                                    )}
+
+                                                    {/* Active: Deactivate */}
+                                                    {req.subscription_status === 'active' && (
                                                         <Button
-                                                            onClick={() => onHandleRequest(req.id, 'approve', approvalDuration)}
-                                                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                                            onClick={() => onDeactivateUser(req)}
+                                                            disabled={actionLoadingId === req.id}
+                                                            className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all"
                                                             size="sm"
                                                         >
-                                                            <Check className="w-4 h-4 mr-2" /> Accept
+                                                            {actionLoadingId === req.id
+                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                : <><UserX className="w-4 h-4 mr-1.5" /> Deactivate</>
+                                                            }
                                                         </Button>
+                                                    )}
+
+                                                    {/* Disabled: Reactivate */}
+                                                    {req.subscription_status === 'disabled' && (
                                                         <Button
-                                                            onClick={() => onHandleRequest(req.id, 'reject')}
-                                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20"
+                                                            onClick={() => onReactivateUser(req)}
+                                                            disabled={actionLoadingId === req.id}
+                                                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all"
                                                             size="sm"
                                                         >
-                                                            <X className="w-4 h-4 mr-2" /> Deny
+                                                            {actionLoadingId === req.id
+                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                : <><RotateCcw className="w-4 h-4 mr-1.5" /> Re-activate</>
+                                                            }
                                                         </Button>
-                                                    </div>
-                                                )}
+                                                    )}
+
+                                                    {/* Rejected: Re-activate option */}
+                                                    {req.subscription_status === 'rejected' && (
+                                                        <Button
+                                                            onClick={() => onReactivateUser(req)}
+                                                            disabled={actionLoadingId === req.id}
+                                                            className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-all"
+                                                            size="sm"
+                                                        >
+                                                            {actionLoadingId === req.id
+                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                : <><UserCheck className="w-4 h-4 mr-1.5" /> Approve</>
+                                                            }
+                                                        </Button>
+                                                    )}
+
+                                                    {/* Divider */}
+                                                    <div className="w-px h-5 bg-white/10 mx-1 self-center" />
+
+                                                    {/* Remove User — always visible */}
+                                                    <Button
+                                                        onClick={() => onRemoveUser(req)}
+                                                        disabled={deleteLoadingId === req.id || actionLoadingId === req.id}
+                                                        className="bg-red-900/20 hover:bg-red-500/20 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 transition-all"
+                                                        size="sm"
+                                                        title="Permanently remove this user"
+                                                    >
+                                                        {deleteLoadingId === req.id
+                                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                            : <><Trash2 className="w-4 h-4 mr-1.5" /> Remove</>
+                                                        }
+                                                    </Button>
+                                                </div>
                                             </div>
                                             <div className="mt-2 text-xs text-slate-500">
                                                 <button

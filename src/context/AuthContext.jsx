@@ -1,22 +1,49 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { saveAdminEmail, saveAdminPassword } from '@/lib/settingsService';
+
+// Dynamic admin credentials — controlled via .env (VITE_ADMIN_EMAIL / VITE_ADMIN_DEFAULT_PASSWORD)
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Becomes true when Supabase fires the PASSWORD_RECOVERY event.
+  // Auth.jsx watches this flag to auto-switch to the update-password form.
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   // Initialize System State
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    // Check active session — if the stored token is stale/expired, sign out
+    // to clear localStorage before returning, preventing the 400
+    // refresh_token_not_found loop on every page load.
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        // Stale or revoked session — wipe it silently so the user sees the
+        // login screen instead of an infinite 400/refresh_token_not_found loop.
+        console.warn('Session restore failed, clearing stale session:', error.message);
+        supabase.auth.signOut();
+        setUser(null);
+      } else {
+        setUser(session?.user ?? null);
+      }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      // PASSWORD_RECOVERY fires when the user clicks a valid password-reset
+      // email link and Supabase successfully exchanges the token.
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      }
+      // Clear the recovery flag once the user updates their password (USER_UPDATED)
+      // or signs out mid-flow.
+      if (event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -25,39 +52,29 @@ export const AuthProvider = ({ children }) => {
   // --- Auth Functions ---
 
   const login = useCallback(async (email, password) => {
-    // 1. Try Signing In
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    // 2. Fallback: If Admin and "Invalid login credentials", try Creating the Account automatically
-    // This helps if the user skipped the registration step.
-    if (error && (email === 'md@edienviro.com' || email === 'admin@demo.com') && error.message.includes('Invalid login credentials')) {
-      console.log("Admin account not found (or wrong pass). Attempting auto-registration for Admin...");
+    if (error) return { success: false, error: error.message };
 
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { role: 'admin', full_name: 'Master Admin' } }
-      });
-
-      if (!signUpError && signUpData.user) {
-        // Auto-registration successful.
-        // Profile creation is now handled by the DB Trigger 'on_auth_user_created'.
-
-        // If Supabase allows sign-in immediately (confirm email off), we are good.
-        // If it requires confirmation, we must warn user.
-        if (signUpData.session) {
-          return { success: true, user: signUpData.user };
-        } else {
-          return { success: false, error: "Admin Account Created! Please check your email to confirm registration." };
-        }
-      }
+    // Determine role from profiles table — this is the AUTHORITATIVE source.
+    // user_metadata.role is only set when the account is created via signUp();
+    // accounts created manually in the Supabase dashboard have no metadata role.
+    // Querying profiles guarantees the correct role regardless of how the account
+    // was created.
+    let role = data.user?.user_metadata?.role || null;
+    if (data.user?.id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      if (profile?.role) role = profile.role;
     }
 
-    if (error) return { success: false, error: error.message };
-    return { success: true, user: data.user };
+    return { success: true, user: data.user, role };
   }, []);
 
   const logout = useCallback(async () => {
@@ -160,7 +177,7 @@ export const AuthProvider = ({ children }) => {
         data: {
           full_name: requestData.name,
           transaction_id: requestData.transactionId,
-          role: (requestData.email === 'md@edienviro.com' || requestData.email === 'admin@demo.com') ? 'admin' : 'client',
+          role: requestData.email === ADMIN_EMAIL ? 'admin' : 'client',
           payment_proof_id: requestData.paymentProofId || 'uploaded', // Legacy or fallback
           payment_proof_url: paymentProofUrl, // New URL field
           subscription_status: 'pending',
@@ -184,35 +201,74 @@ export const AuthProvider = ({ children }) => {
 
   // --- Admin Functions ---
 
-  const updateAdminCredentials = useCallback(async ({ newEmail, newPassword }) => {
-    const updates = {};
-    if (newEmail) updates.email = newEmail;
-    if (newPassword) updates.password = newPassword;
+  const updateAdminCredentials = useCallback(async ({ newEmail, newPassword, newDisplayName }) => {
+    const authUpdates = {};
+    if (newEmail) authUpdates.email = newEmail;
+    if (newPassword) authUpdates.password = newPassword;
+    if (newDisplayName) authUpdates.data = { full_name: newDisplayName };
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(authUpdates).length === 0) {
       return { success: false, error: 'No changes provided.' };
     }
 
-    // 1. Update Supabase Auth (auth.users table)
-    const { data, error } = await supabase.auth.updateUser(updates);
+    // 1. Update Supabase Auth (auth.users table — email, password, user_metadata)
+    const { data, error } = await supabase.auth.updateUser(authUpdates);
     if (error) return { success: false, error: error.message };
 
-    // 2. If email changed, also sync the profiles table so both stay consistent.
-    //    (auth.users has no built-in UPDATE trigger to profiles.email)
-    if (newEmail && data.user) {
+    // 2. Sync profiles table for email and/or display name changes
+    const profileUpdates = {};
+    if (newEmail) profileUpdates.email = newEmail;
+    if (newDisplayName) profileUpdates.full_name = newDisplayName;
+
+    if (Object.keys(profileUpdates).length > 0 && data.user) {
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ email: newEmail })
+        .update(profileUpdates)
         .eq('id', data.user.id);
 
       if (profileError) {
-        console.warn('Auth email updated but profiles.email sync failed:', profileError.message);
-        // Return success because auth is updated; warn about the partial sync
-        return { success: true, user: data.user, warning: profileError.message };
+        console.warn('Auth updated but profiles sync failed:', profileError.message);
+      }
+    }
+
+    // 3. Persist new credentials to app_settings so the dashboard always
+    //    shows the live values without relying on build-time .env variables.
+    //    This is what makes admin password/email changes truly dynamic —
+    //    the DB row becomes the source of truth after the first save.
+    const settingsSaves = [];
+    if (newEmail)    settingsSaves.push(saveAdminEmail(newEmail));
+    if (newPassword) settingsSaves.push(saveAdminPassword(newPassword));
+
+    if (settingsSaves.length > 0) {
+      const results = await Promise.all(settingsSaves);
+      const failed  = results.find(r => !r.success);
+      if (failed) {
+        // Supabase Auth was already updated — treat as partial success with warning
+        console.warn('Auth updated but app_settings sync failed:', failed.error);
+        return {
+          success: true,
+          user: data.user,
+          warning: `Credentials changed in Auth but could not persist to settings table: ${failed.error}`,
+        };
       }
     }
 
     return { success: true, user: data.user };
+  }, []);
+
+  // --- Fetch Admin Profile from DB (for verification) ---
+  const getAdminProfile = useCallback(async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) return { success: false, error: 'Not authenticated.' };
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, full_name, role, created_at')
+      .eq('id', currentUser.id)
+      .single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, profile: data, authEmail: currentUser.email };
   }, []);
 
   const getRequests = useCallback(async () => {
@@ -308,10 +364,45 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
 
+  // --- Delete / Remove User ---
+
+  const deleteUser = useCallback(async (userId) => {
+    // 1. Delete from profiles table — chain .select('id') so we can detect
+    //    when RLS silently blocks the delete (returns 0 rows, no error).
+    const { data: deleted, error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+      .select('id');
+
+    if (profileError) return { success: false, error: profileError.message };
+
+    if (!deleted || deleted.length === 0) {
+      return {
+        success: false,
+        error: 'Delete was blocked by database permissions. Please run add_admin_delete_policy.sql in your Supabase SQL Editor and try again.',
+      };
+    }
+
+    // 2. Attempt to remove the auth record via admin API.
+    //    Works when the Supabase client uses the service-role key.
+    //    Silently skipped with the anon key — profile deletion is sufficient.
+    try {
+      await supabase.auth.admin.deleteUser(userId);
+    } catch (_) {
+      // Not fatal — profile already deleted, access is revoked.
+    }
+
+    return { success: true };
+  }, []);
+
   // --- Password Reset / Update ---
 
   const resetPassword = useCallback(async (email) => {
-    const redirectUrl = `${window.location.origin}/update-password`;
+    // Redirect to the Auth page (/signup) so the hash-based error or token
+    // is always handled by the Auth component regardless of which route
+    // Supabase picks as fallback.
+    const redirectUrl = `${window.location.origin}/signup`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
@@ -328,6 +419,7 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(() => ({
     user,
     loading,
+    isPasswordRecovery,
     login,
     logout,
     // Auth Helpers
@@ -336,11 +428,13 @@ export const AuthProvider = ({ children }) => {
     updateQRCode,
     getRequests,
     handleRequest,
+    deleteUser,
     resendVerification,
     updateAdminCredentials,
+    getAdminProfile,
     resetPassword,
     updatePassword,
-  }), [user, loading, login, logout, getQRCode, submitSignupRequest, updateQRCode, getRequests, handleRequest, updateAdminCredentials, resetPassword, updatePassword]);
+  }), [user, loading, isPasswordRecovery, login, logout, getQRCode, submitSignupRequest, updateQRCode, getRequests, handleRequest, deleteUser, updateAdminCredentials, getAdminProfile, resetPassword, updatePassword]);
 
   // New Helper: Resend Verification
   async function resendVerification(email) {

@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { getRegistrationFee } from '@/lib/settingsService';
 
+// Dynamic admin email — kept in sync with .env so redirect works after credential changes
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
+
 // Subscription Plans Data
 const SUBSCRIPTION_PLANS = [
     {
@@ -72,7 +75,7 @@ const BANK_DETAILS = {
 const Auth = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { login, submitSignupRequest, getQRCode, resendVerification, resetPassword, updatePassword } = useAuth();
+    const { login, submitSignupRequest, getQRCode, resendVerification, resetPassword, updatePassword, isPasswordRecovery } = useAuth();
     const { toast } = useToast();
 
     // Initialize mode based on URL param 'mode' or default to 'welcome'
@@ -116,14 +119,82 @@ const Auth = () => {
         setQrCodeUrl(getQRCode());
     }, [getQRCode]);
 
-    // Check for password recovery mode
+    // ---------------------------------------------------------------
+    // PASSWORD RECOVERY — two independent triggers:
+    //
+    // Trigger A: Supabase fires PASSWORD_RECOVERY via onAuthStateChange.
+    //   AuthContext catches it and sets isPasswordRecovery = true.
+    //   The useEffect below watches that flag and switches the form.
+    //
+    // Trigger B: The page URL contains a Supabase hash fragment.
+    //   This covers the implicit-flow case where the token is in the
+    //   hash and Supabase hasn't processed it yet on first render.
+    //   It also handles error hashes (otp_expired, access_denied).
+    // ---------------------------------------------------------------
+
+    // Trigger A — react to the PASSWORD_RECOVERY auth event
     useEffect(() => {
-        const hash = window.location.hash;
-        if (hash && hash.includes('type=recovery')) {
+        if (isPasswordRecovery) {
             setMode('update-password');
         }
-        if (window.location.pathname === '/update-password') {
+    }, [isPasswordRecovery]);
+
+    // Trigger B — parse URL hash on mount
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (!hash) return;
+
+        const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+        const errorCode   = hashParams.get('error_code');        // e.g. "otp_expired"
+        const errorDesc   = hashParams.get('error_description'); // human-readable
+        const type        = hashParams.get('type');              // e.g. "recovery"
+
+        // --- Error case: Supabase redirected with an error ---
+        if (errorCode) {
+            // Always wipe the ugly hash from the URL bar
+            window.history.replaceState(null, '', window.location.pathname);
+
+            if (errorCode === 'otp_expired' || errorCode === 'access_denied') {
+                toast({
+                    title: 'Reset Link Expired',
+                    description:
+                        errorDesc
+                            ? decodeURIComponent(errorDesc.replace(/\+/g, ' '))
+                            : 'Your password reset link has expired or is invalid. Please request a new one.',
+                    variant: 'destructive',
+                    duration: 8000,
+                });
+                // Send user back to the forgot-password form to request a fresh link
+                setMode('forgot-password');
+            } else {
+                toast({ title: 'Authentication Error', description: errorCode, variant: 'destructive' });
+                setMode('welcome');
+            }
+            return;
+        }
+
+        // --- Success case: implicit flow token in hash ---
+        if (type === 'recovery') {
             setMode('update-password');
+        }
+
+        // Clean up non-error hashes too
+        if (hash.includes('access_token') || hash.includes('type=')) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
+
+    // Trigger B also handles the /update-password and /auth/callback path
+    useEffect(() => {
+        if (
+            window.location.pathname === '/update-password' ||
+            window.location.pathname === '/auth/callback'
+        ) {
+            // Only switch if there's no error in the hash — Trigger B above handles errors
+            const hash = window.location.hash;
+            if (!hash.includes('error')) {
+                setMode('update-password');
+            }
         }
     }, []);
 
@@ -141,14 +212,19 @@ const Auth = () => {
         const result = await login(data.email, data.password);
         if (result.success) {
             toast({ title: "Authenticated", description: "Accessing secure environment..." });
-            // Check if user is admin explicitly via metadata or fallback email check
-            const isRoleAdmin = result.user?.user_metadata?.role === 'admin';
-            const isEmailAdmin = data.email.includes('admin') || data.email.includes('edienviro');
+            // Admin check priority order:
+            //  1. profiles table role (most reliable — works for manually-created accounts)
+            //  2. user_metadata.role (works for accounts created via signUp() with role option)
+            //  3. email match against ADMIN_EMAIL env / fallback (last resort)
+            const isRoleAdmin =
+                result.role === 'admin' ||
+                result.user?.user_metadata?.role === 'admin';
+            const isEmailAdmin = result.user?.email === ADMIN_EMAIL;
 
             if (isRoleAdmin || isEmailAdmin) {
                 navigate('/admin');
             } else {
-                // If there's a specific redirect path, go there. Otherwise default to Client Profile for clients.
+                // If there's a specific redirect path, go there. Otherwise default to Client Profile.
                 if (redirectPath) {
                     navigate(redirectPath);
                 } else {

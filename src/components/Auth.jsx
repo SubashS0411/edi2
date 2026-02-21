@@ -19,11 +19,11 @@ const Auth = () => {
     password: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isLogin) {
-      const result = login(formData.email, formData.password);
+      const result = await login(formData.email, formData.password);
       if (result.success) {
         toast({ title: "Welcome back!", description: "Successfully logged in." });
       } else {
