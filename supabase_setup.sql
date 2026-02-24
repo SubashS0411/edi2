@@ -113,9 +113,11 @@ create policy "Enable insert for authenticated users only"
   with check ( auth.uid() = id );
 
 -- HELPER: Manually Confirm Email (Fix "Email not confirmed" error)
+-- Confirm ALL admin-related emails so login works immediately
 update auth.users
 set email_confirmed_at = now()
-where email = 'admin@demo.com';
+where email in ('md@edienv.com', 'admin@demo.com', 'md@edienviro.com')
+  and email_confirmed_at is null;
 
 -- 6. Storage Setup (for QR Code)
 insert into storage.buckets (id, name, public)
