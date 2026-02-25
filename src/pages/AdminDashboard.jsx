@@ -13,6 +13,9 @@ import { checkAndSendReminders } from '@/lib/emailService';
 // Dynamic admin email — read from .env so it stays in sync when credentials are changed
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
 
+// Helper: detect whether a user row belongs to an admin account
+const isAdminUser = (req) => req.role === 'admin' || req.email === ADMIN_EMAIL;
+
 const AdminDashboard = () => {
     const { user, handleRequest, deleteUser, getQRCode, updateQRCode, logout, updateAdminCredentials, getAdminProfile } = useAuth();
     const navigate = useNavigate();
@@ -96,7 +99,7 @@ const AdminDashboard = () => {
         //  2. user_metadata.role   (works for accounts created via signUp with role option)
         //  3. email match          (last resort fallback)
         const verifyAndLoad = async () => {
-            const metaRole  = user.user_metadata?.role;
+            const metaRole = user.user_metadata?.role;
             const emailMatch = user.email === ADMIN_EMAIL;
 
             // Fast path: metadata or email already confirms admin
@@ -149,6 +152,10 @@ const AdminDashboard = () => {
     };
 
     const onDeactivateUser = (req) => {
+        if (isAdminUser(req)) {
+            toast({ title: 'Protected Account', description: 'Admin account cannot be deactivated.', variant: 'destructive' });
+            return;
+        }
         if (!window.confirm(`Deactivate "${req.full_name || req.email}"?\nThis will revoke their access immediately.`)) return;
         onHandleRequest(req.id, 'disable');
     };
@@ -159,6 +166,10 @@ const AdminDashboard = () => {
     };
 
     const onRemoveUser = async (req) => {
+        if (isAdminUser(req)) {
+            toast({ title: 'Protected Account', description: 'Admin account cannot be removed.', variant: 'destructive' });
+            return;
+        }
         if (!window.confirm(
             `Permanently remove "${req.full_name || req.email}"?\n\nThis will delete all their data and cannot be undone.`
         )) return;
@@ -651,92 +662,102 @@ const AdminDashboard = () => {
 
                                                 {/* Action Buttons */}
                                                 <div className="flex items-center gap-2 mt-4 md:mt-0 flex-wrap">
-                                                    {/* Pending: Accept / Deny */}
-                                                    {req.subscription_status === 'pending' && (
+                                                    {/* Admin accounts are protected — show badge instead of action buttons */}
+                                                    {isAdminUser(req) ? (
+                                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                                                            <Shield className="w-4 h-4 text-purple-400" />
+                                                            <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Protected Admin</span>
+                                                        </div>
+                                                    ) : (
                                                         <>
+                                                            {/* Pending: Accept / Deny */}
+                                                            {req.subscription_status === 'pending' && (
+                                                                <>
+                                                                    <Button
+                                                                        onClick={() => onHandleRequest(req.id, 'approve', approvalDuration)}
+                                                                        disabled={actionLoadingId === req.id}
+                                                                        className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                                                        size="sm"
+                                                                    >
+                                                                        {actionLoadingId === req.id
+                                                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                            : <><Check className="w-4 h-4 mr-1.5" /> Accept</>
+                                                                        }
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => onHandleRequest(req.id, 'reject')}
+                                                                        disabled={actionLoadingId === req.id}
+                                                                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20"
+                                                                        size="sm"
+                                                                    >
+                                                                        <X className="w-4 h-4 mr-1.5" /> Deny
+                                                                    </Button>
+                                                                </>
+                                                            )}
+
+                                                            {/* Active: Deactivate */}
+                                                            {req.subscription_status === 'active' && (
+                                                                <Button
+                                                                    onClick={() => onDeactivateUser(req)}
+                                                                    disabled={actionLoadingId === req.id}
+                                                                    className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all"
+                                                                    size="sm"
+                                                                >
+                                                                    {actionLoadingId === req.id
+                                                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                        : <><UserX className="w-4 h-4 mr-1.5" /> Deactivate</>
+                                                                    }
+                                                                </Button>
+                                                            )}
+
+                                                            {/* Disabled: Reactivate */}
+                                                            {req.subscription_status === 'disabled' && (
+                                                                <Button
+                                                                    onClick={() => onReactivateUser(req)}
+                                                                    disabled={actionLoadingId === req.id}
+                                                                    className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all"
+                                                                    size="sm"
+                                                                >
+                                                                    {actionLoadingId === req.id
+                                                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                        : <><RotateCcw className="w-4 h-4 mr-1.5" /> Re-activate</>
+                                                                    }
+                                                                </Button>
+                                                            )}
+
+                                                            {/* Rejected: Re-activate option */}
+                                                            {req.subscription_status === 'rejected' && (
+                                                                <Button
+                                                                    onClick={() => onReactivateUser(req)}
+                                                                    disabled={actionLoadingId === req.id}
+                                                                    className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-all"
+                                                                    size="sm"
+                                                                >
+                                                                    {actionLoadingId === req.id
+                                                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                                        : <><UserCheck className="w-4 h-4 mr-1.5" /> Approve</>
+                                                                    }
+                                                                </Button>
+                                                            )}
+
+                                                            {/* Divider */}
+                                                            <div className="w-px h-5 bg-white/10 mx-1 self-center" />
+
+                                                            {/* Remove User — visible for non-admin users only */}
                                                             <Button
-                                                                onClick={() => onHandleRequest(req.id, 'approve', approvalDuration)}
-                                                                disabled={actionLoadingId === req.id}
-                                                                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                                                onClick={() => onRemoveUser(req)}
+                                                                disabled={deleteLoadingId === req.id || actionLoadingId === req.id}
+                                                                className="bg-red-900/20 hover:bg-red-500/20 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 transition-all"
                                                                 size="sm"
+                                                                title="Permanently remove this user"
                                                             >
-                                                                {actionLoadingId === req.id
+                                                                {deleteLoadingId === req.id
                                                                     ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                                    : <><Check className="w-4 h-4 mr-1.5" /> Accept</>
+                                                                    : <><Trash2 className="w-4 h-4 mr-1.5" /> Remove</>
                                                                 }
-                                                            </Button>
-                                                            <Button
-                                                                onClick={() => onHandleRequest(req.id, 'reject')}
-                                                                disabled={actionLoadingId === req.id}
-                                                                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20"
-                                                                size="sm"
-                                                            >
-                                                                <X className="w-4 h-4 mr-1.5" /> Deny
                                                             </Button>
                                                         </>
                                                     )}
-
-                                                    {/* Active: Deactivate */}
-                                                    {req.subscription_status === 'active' && (
-                                                        <Button
-                                                            onClick={() => onDeactivateUser(req)}
-                                                            disabled={actionLoadingId === req.id}
-                                                            className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all"
-                                                            size="sm"
-                                                        >
-                                                            {actionLoadingId === req.id
-                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                                : <><UserX className="w-4 h-4 mr-1.5" /> Deactivate</>
-                                                            }
-                                                        </Button>
-                                                    )}
-
-                                                    {/* Disabled: Reactivate */}
-                                                    {req.subscription_status === 'disabled' && (
-                                                        <Button
-                                                            onClick={() => onReactivateUser(req)}
-                                                            disabled={actionLoadingId === req.id}
-                                                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all"
-                                                            size="sm"
-                                                        >
-                                                            {actionLoadingId === req.id
-                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                                : <><RotateCcw className="w-4 h-4 mr-1.5" /> Re-activate</>
-                                                            }
-                                                        </Button>
-                                                    )}
-
-                                                    {/* Rejected: Re-activate option */}
-                                                    {req.subscription_status === 'rejected' && (
-                                                        <Button
-                                                            onClick={() => onReactivateUser(req)}
-                                                            disabled={actionLoadingId === req.id}
-                                                            className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-all"
-                                                            size="sm"
-                                                        >
-                                                            {actionLoadingId === req.id
-                                                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                                : <><UserCheck className="w-4 h-4 mr-1.5" /> Approve</>
-                                                            }
-                                                        </Button>
-                                                    )}
-
-                                                    {/* Divider */}
-                                                    <div className="w-px h-5 bg-white/10 mx-1 self-center" />
-
-                                                    {/* Remove User — always visible */}
-                                                    <Button
-                                                        onClick={() => onRemoveUser(req)}
-                                                        disabled={deleteLoadingId === req.id || actionLoadingId === req.id}
-                                                        className="bg-red-900/20 hover:bg-red-500/20 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 transition-all"
-                                                        size="sm"
-                                                        title="Permanently remove this user"
-                                                    >
-                                                        {deleteLoadingId === req.id
-                                                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                            : <><Trash2 className="w-4 h-4 mr-1.5" /> Remove</>
-                                                        }
-                                                    </Button>
                                                 </div>
                                             </div>
                                             <div className="mt-2 text-xs text-slate-500">
