@@ -43,10 +43,12 @@ const AdminDashboard = () => {
     // --- Live Admin Credentials (loaded from app_settings DB, NOT from .env) ---
     // These are the CURRENT credentials as stored in the database.
     // They update immediately after every successful credential change.
-    const [currentAdminEmail, setCurrentAdminEmail] = useState(import.meta.env.VITE_ADMIN_EMAIL || 'md@edienv.com');
+    const [currentAdminEmail, setCurrentAdminEmail] = useState(ADMIN_EMAIL);
     const [currentAdminPassword, setCurrentAdminPassword] = useState('');
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [isLoadingCreds, setIsLoadingCreds] = useState(false);
+    const [isAdminDisabled, setIsAdminDisabled] = useState(false);
+    const [isTogglingAdmin, setIsTogglingAdmin] = useState(false);
 
     // --- DB Verification State ---
     const [dbProfile, setDbProfile] = useState(null);
@@ -107,6 +109,10 @@ const AdminDashboard = () => {
                 fetchData();
                 loadAdminCredentials();
                 setQrUrl(getQRCode() || '');
+                // Initialize admin toggle state from own profile
+                const { data: ownProfile } = await supabase
+                    .from('profiles').select('subscription_status').eq('id', user.id).maybeSingle();
+                if (ownProfile) setIsAdminDisabled(ownProfile.subscription_status === 'disabled');
                 return;
             }
 
@@ -228,14 +234,24 @@ const AdminDashboard = () => {
         if (result.success) {
             const changed = [];
             if (credDisplayName) changed.push('username');
-            if (credEmail) changed.push('email');
             if (credPassword) changed.push('password');
-            toast({
-                title: 'Credentials Updated',
-                description: `${changed.join(', ')} updated successfully.${credEmail ? ' Check your inbox to confirm the email change.' : ''
-                    }`,
-                className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-            });
+
+            // Email changes are pending until Supabase email confirmation
+            if (result.emailPending) {
+                toast({
+                    title: 'Email Change Pending',
+                    description: `Check BOTH your old and new inbox for confirmation links. Your current login email stays active until confirmed. ${changed.length > 0 ? `(${changed.join(', ')} updated immediately)` : ''}`,
+                    className: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+                    duration: 10000,
+                });
+            } else if (changed.length > 0) {
+                toast({
+                    title: 'Credentials Updated',
+                    description: `${changed.join(', ')} updated successfully.`,
+                    className: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+                });
+            }
+
             setCredDisplayName('');
             setCredEmail('');
             setCredPassword('');
@@ -506,6 +522,75 @@ const AdminDashboard = () => {
                             </Button>
                         </div>
                     </form>
+
+                    {/* Admin Account Enable/Disable Toggle */}
+                    <div className="border-t border-white/5 p-6">
+                        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border ${isAdminDisabled
+                            ? 'bg-amber-500/5 border-amber-500/20'
+                            : 'bg-emerald-500/5 border-emerald-500/20'
+                            }`}>
+                            <div className="flex items-center gap-3">
+                                {isAdminDisabled ? (
+                                    <Ban className="w-5 h-5 text-amber-400" />
+                                ) : (
+                                    <Shield className="w-5 h-5 text-emerald-400" />
+                                )}
+                                <div>
+                                    <h3 className={`text-sm font-semibold ${isAdminDisabled ? 'text-amber-400' : 'text-emerald-400'
+                                        }`}>
+                                        Admin Account: {isAdminDisabled ? 'Disabled' : 'Active'}
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        {isAdminDisabled
+                                            ? 'Admin account is disabled. Re-enable to restore full access.'
+                                            : 'Toggle off to temporarily disable this admin account.'
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                type="button"
+                                onClick={async () => {
+                                    setIsTogglingAdmin(true);
+                                    const newStatus = isAdminDisabled ? 'active' : 'disabled';
+                                    const { error } = await supabase
+                                        .from('profiles')
+                                        .update({ subscription_status: newStatus })
+                                        .eq('id', user.id);
+
+                                    if (error) {
+                                        toast({ title: 'Toggle Failed', description: error.message, variant: 'destructive' });
+                                    } else {
+                                        setIsAdminDisabled(!isAdminDisabled);
+                                        toast({
+                                            title: isAdminDisabled ? 'Admin Enabled' : 'Admin Disabled',
+                                            description: isAdminDisabled
+                                                ? 'Admin account has been re-enabled.'
+                                                : 'Admin account has been disabled. You can re-enable it anytime.',
+                                            className: isAdminDisabled
+                                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                                : 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+                                        });
+                                    }
+                                    setIsTogglingAdmin(false);
+                                }}
+                                disabled={isTogglingAdmin}
+                                variant="outline"
+                                className={`rounded-xl px-5 py-2 font-semibold transition-all ${isAdminDisabled
+                                    ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                                    : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                                    }`}
+                            >
+                                {isTogglingAdmin ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Toggling...</>
+                                ) : isAdminDisabled ? (
+                                    <><UserCheck className="w-4 h-4 mr-2" /> Enable Account</>
+                                ) : (
+                                    <><Ban className="w-4 h-4 mr-2" /> Disable Account</>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
 
                     {/* DB Verification Panel */}
                     <AnimatePresence>

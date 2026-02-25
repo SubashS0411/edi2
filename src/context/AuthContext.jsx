@@ -52,18 +52,47 @@ export const AuthProvider = ({ children }) => {
   // --- Auth Functions ---
 
   const login = useCallback(async (email, password) => {
+    // 1. Try signing in normally
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
+    // 2. Auto-registration fallback for admin account.
+    //    If the ADMIN_EMAIL doesn't exist yet, auto-create it on first login
+    //    attempt so admins never need to run SQL manually.
+    //    The DB trigger 'on_auth_user_created' will automatically insert
+    //    a profiles row with role = 'admin' from the user_metadata.
+    if (error && email === ADMIN_EMAIL && error.message.includes('Invalid login credentials')) {
+      console.log('Admin account not found — auto-registering...');
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { role: 'admin', full_name: 'Master Admin' } }
+      });
+
+      if (signUpError) {
+        return { success: false, error: signUpError.message };
+      }
+
+      if (signUpData?.session) {
+        // Immediate sign-in (email confirmation disabled in Supabase settings)
+        return { success: true, user: signUpData.user, role: 'admin' };
+      } else {
+        // Supabase requires email confirmation before login
+        return {
+          success: false,
+          error: 'Admin account created! Please check your email to confirm, then login again.'
+        };
+      }
+    }
+
     if (error) return { success: false, error: error.message };
 
-    // Determine role from profiles table — this is the AUTHORITATIVE source.
-    // user_metadata.role is only set when the account is created via signUp();
-    // accounts created manually in the Supabase dashboard have no metadata role.
-    // Querying profiles guarantees the correct role regardless of how the account
-    // was created.
+    // 3. Determine role from profiles table — this is the AUTHORITATIVE source.
+    //    user_metadata.role is only set when the account is created via signUp();
+    //    accounts created manually in the Supabase dashboard have no metadata role.
     let role = data.user?.user_metadata?.role || null;
     if (data.user?.id) {
       const { data: profile } = await supabase
@@ -215,9 +244,12 @@ export const AuthProvider = ({ children }) => {
     const { data, error } = await supabase.auth.updateUser(authUpdates);
     if (error) return { success: false, error: error.message };
 
-    // 2. Sync profiles table for email and/or display name changes
+    // 2. Sync profiles table — BUT only for display name, NOT email.
+    //    Email changes require Supabase confirmation (user clicks email link).
+    //    The DB trigger 'handle_user_updated' on auth.users automatically syncs
+    //    profiles.email AFTER Supabase finalises the email change.
+    //    Writing the new email to profiles now would cause a mismatch.
     const profileUpdates = {};
-    if (newEmail) profileUpdates.email = newEmail;
     if (newDisplayName) profileUpdates.full_name = newDisplayName;
 
     if (Object.keys(profileUpdates).length > 0 && data.user) {
@@ -233,17 +265,14 @@ export const AuthProvider = ({ children }) => {
 
     // 3. Persist new credentials to app_settings so the dashboard always
     //    shows the live values without relying on build-time .env variables.
-    //    This is what makes admin password/email changes truly dynamic —
-    //    the DB row becomes the source of truth after the first save.
     const settingsSaves = [];
-    if (newEmail)    settingsSaves.push(saveAdminEmail(newEmail));
+    if (newEmail) settingsSaves.push(saveAdminEmail(newEmail));
     if (newPassword) settingsSaves.push(saveAdminPassword(newPassword));
 
     if (settingsSaves.length > 0) {
       const results = await Promise.all(settingsSaves);
-      const failed  = results.find(r => !r.success);
+      const failed = results.find(r => !r.success);
       if (failed) {
-        // Supabase Auth was already updated — treat as partial success with warning
         console.warn('Auth updated but app_settings sync failed:', failed.error);
         return {
           success: true,
@@ -253,7 +282,12 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    return { success: true, user: data.user };
+    // 4. Flag whether email change is pending confirmation
+    return {
+      success: true,
+      user: data.user,
+      emailPending: !!newEmail,
+    };
   }, []);
 
   // --- Fetch Admin Profile from DB (for verification) ---

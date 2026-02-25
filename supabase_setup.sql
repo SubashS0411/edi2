@@ -6,6 +6,7 @@ create table if not exists public.profiles (
   role text default 'client',
   transaction_id text,
   payment_proof_id text,
+  payment_proof_url text,
   subscription_status text default 'pending',
   subscription_start timestamp with time zone,
   subscription_end timestamp with time zone,
@@ -17,6 +18,7 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists subscription_start timestamp with time zone;
 alter table public.profiles add column if not exists subscription_end timestamp with time zone;
 alter table public.profiles add column if not exists access_token text;
+alter table public.profiles add column if not exists payment_proof_url text;
 
 -- 2. Enable RLS
 alter table public.profiles enable row level security;
@@ -25,13 +27,14 @@ alter table public.profiles enable row level security;
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name, role, transaction_id, created_at)
+  insert into public.profiles (id, email, full_name, role, transaction_id, payment_proof_url, created_at)
   values (
     new.id,
     new.email,
     new.raw_user_meta_data->>'full_name',
     coalesce(new.raw_user_meta_data->>'role', 'client'),
     new.raw_user_meta_data->>'transaction_id',
+    new.raw_user_meta_data->>'payment_proof_url',
     now()
   );
   return new;

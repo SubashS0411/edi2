@@ -6,6 +6,7 @@ import { Eye, EyeOff, ArrowLeft, Loader2, Upload, QrCode, ChevronRight, CheckCir
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { getRegistrationFee } from '@/lib/settingsService';
+import { supabase } from '@/lib/customSupabaseClient';
 
 // Dynamic admin email — kept in sync with .env so redirect works after credential changes
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
@@ -145,9 +146,9 @@ const Auth = () => {
         if (!hash) return;
 
         const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
-        const errorCode   = hashParams.get('error_code');        // e.g. "otp_expired"
-        const errorDesc   = hashParams.get('error_description'); // human-readable
-        const type        = hashParams.get('type');              // e.g. "recovery"
+        const errorCode = hashParams.get('error_code');        // e.g. "otp_expired"
+        const errorDesc = hashParams.get('error_description'); // human-readable
+        const type = hashParams.get('type');              // e.g. "recovery"
 
         // --- Error case: Supabase redirected with an error ---
         if (errorCode) {
@@ -211,20 +212,45 @@ const Auth = () => {
         setIsLoading(true);
         const result = await login(data.email, data.password);
         if (result.success) {
-            toast({ title: "Authenticated", description: "Accessing secure environment..." });
-            // Admin check priority order:
-            //  1. profiles table role (most reliable — works for manually-created accounts)
-            //  2. user_metadata.role (works for accounts created via signUp() with role option)
-            //  3. email match against ADMIN_EMAIL env / fallback (last resort)
+            // Determine if this user is an admin
             const isRoleAdmin =
                 result.role === 'admin' ||
                 result.user?.user_metadata?.role === 'admin';
             const isEmailAdmin = result.user?.email === ADMIN_EMAIL;
+            const isAdmin = isRoleAdmin || isEmailAdmin;
 
-            if (isRoleAdmin || isEmailAdmin) {
+            // --- Role-Mode Gate ---
+            // Prevent admin accounts from logging in via the client form and vice versa.
+            if (mode === 'client-login' && isAdmin) {
+                // Admin tried to use the client login form — reject
+                await supabase.auth.signOut(); // Clear the session we just created
+                toast({
+                    title: 'Wrong Login Portal',
+                    description: 'Admin accounts must use the Admin Authentication panel.',
+                    variant: 'destructive',
+                    duration: 5000,
+                });
+                setIsLoading(false);
+                return;
+            }
+            if (mode === 'admin-login' && !isAdmin) {
+                // Client tried to use the admin login form — reject
+                await supabase.auth.signOut();
+                toast({
+                    title: 'Wrong Login Portal',
+                    description: 'Client accounts must use the Client Login panel.',
+                    variant: 'destructive',
+                    duration: 5000,
+                });
+                setIsLoading(false);
+                return;
+            }
+
+            toast({ title: "Authenticated", description: "Accessing secure environment..." });
+
+            if (isAdmin) {
                 navigate('/admin');
             } else {
-                // If there's a specific redirect path, go there. Otherwise default to Client Profile.
                 if (redirectPath) {
                     navigate(redirectPath);
                 } else {
