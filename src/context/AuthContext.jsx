@@ -203,6 +203,7 @@ export const AuthProvider = ({ children }) => {
       email: requestData.email,
       password: requestData.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name: requestData.name,
           transaction_id: requestData.transactionId,
@@ -241,7 +242,10 @@ export const AuthProvider = ({ children }) => {
     }
 
     // 1. Update Supabase Auth (auth.users table — email, password, user_metadata)
-    const { data, error } = await supabase.auth.updateUser(authUpdates);
+    const { data, error } = await supabase.auth.updateUser(
+      authUpdates,
+      { emailRedirectTo: `${window.location.origin}/admin` }
+    );
     if (error) return { success: false, error: error.message };
 
     // 2. Sync profiles table — BUT only for display name, NOT email.
@@ -475,6 +479,9 @@ export const AuthProvider = ({ children }) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      }
     });
     if (error) return { success: false, error: error.message };
     return { success: true };
