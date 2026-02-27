@@ -260,7 +260,11 @@ const AdminDashboard = () => {
             loadAdminCredentials();
             handleVerifyInDatabase();
         } else {
-            toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+            if (result.error?.toLowerCase().includes('same password') || result.error?.toLowerCase().includes('same_password') || result.error?.toLowerCase().includes('different from the old')) {
+                toast({ title: 'Password Unchanged', description: 'The new password must be different from your current one. If you only want to update your email or username, leave the password field blank.', variant: 'destructive' });
+            } else {
+                toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+            }
         }
     };
 
@@ -274,6 +278,170 @@ const AdminDashboard = () => {
             toast({ title: 'Verification Failed', description: result.error, variant: 'destructive' });
         }
     };
+
+    const renderUserCard = (req, idx) => (
+        <motion.div
+            key={req.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+            className={`group border rounded-2xl p-4 transition-all duration-200
+                ${req.subscription_status === 'disabled'
+                    ? 'bg-rose-950/20 border-rose-500/10 hover:border-rose-500/25'
+                    : 'bg-slate-900/40 hover:bg-white/[0.03] border-white/5 hover:border-indigo-500/20'
+                }`}
+        >
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                {/* User Identity */}
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm
+                        ${req.subscription_status === 'active' ? 'bg-gradient-to-tr from-emerald-500 to-green-400 text-black' :
+                            req.subscription_status === 'disabled' ? 'bg-gradient-to-tr from-red-500 to-rose-400 text-white' :
+                                'bg-slate-800 text-slate-400 border border-white/10'}`}>
+                        {req.full_name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
+                                {req.full_name || 'Anonymous'}
+                            </h4>
+                            <div className={`w-2 h-2 rounded-full ${req.subscription_status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                                req.subscription_status === 'disabled' ? 'bg-red-500' : 'bg-amber-500'
+                                }`} />
+                            <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border
+                                ${req.subscription_status === 'active'
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : req.subscription_status === 'disabled'
+                                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                        : req.subscription_status === 'rejected'
+                                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                }`}>
+                                {req.subscription_status === 'disabled' ? 'Deactivated' : req.subscription_status}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                            <span>{req.email}</span>
+                            {req.transaction_id && (
+                                <span className="font-mono bg-white/5 px-1.5 rounded border border-white/5 text-slate-500">
+                                    #{req.transaction_id.substring(0, 6)}
+                                </span>
+                            )}
+                            {req.payment_proof_url && (
+                                <button
+                                    onClick={() => setSelectedProof(req.payment_proof_url)}
+                                    className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors"
+                                >
+                                    <Image className="w-3 h-3" /> View Proof
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 mt-4 md:mt-0 flex-wrap">
+                    {isAdminUser(req) ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                            <Shield className="w-4 h-4 text-purple-400" />
+                            <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Protected Admin</span>
+                        </div>
+                    ) : (
+                        <>
+                            {req.subscription_status === 'pending' && (
+                                <>
+                                    <Button
+                                        onClick={() => onHandleRequest(req.id, 'approve', approvalDuration)}
+                                        disabled={actionLoadingId === req.id}
+                                        className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                        size="sm"
+                                    >
+                                        {actionLoadingId === req.id
+                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                            : <><Check className="w-4 h-4 mr-1.5" /> Accept</>
+                                        }
+                                    </Button>
+                                    <Button
+                                        onClick={() => onHandleRequest(req.id, 'reject')}
+                                        disabled={actionLoadingId === req.id}
+                                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20"
+                                        size="sm"
+                                    >
+                                        <X className="w-4 h-4 mr-1.5" /> Deny
+                                    </Button>
+                                </>
+                            )}
+
+                            {req.subscription_status === 'active' && (
+                                <Button
+                                    onClick={() => onDeactivateUser(req)}
+                                    disabled={actionLoadingId === req.id}
+                                    className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all"
+                                    size="sm"
+                                >
+                                    {actionLoadingId === req.id
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <><UserX className="w-4 h-4 mr-1.5" /> Deactivate</>
+                                    }
+                                </Button>
+                            )}
+
+                            {req.subscription_status === 'disabled' && (
+                                <Button
+                                    onClick={() => onReactivateUser(req)}
+                                    disabled={actionLoadingId === req.id}
+                                    className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all"
+                                    size="sm"
+                                >
+                                    {actionLoadingId === req.id
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <><RotateCcw className="w-4 h-4 mr-1.5" /> Re-activate</>
+                                    }
+                                </Button>
+                            )}
+
+                            {req.subscription_status === 'rejected' && (
+                                <Button
+                                    onClick={() => onReactivateUser(req)}
+                                    disabled={actionLoadingId === req.id}
+                                    className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 transition-all"
+                                    size="sm"
+                                >
+                                    {actionLoadingId === req.id
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <><UserCheck className="w-4 h-4 mr-1.5" /> Approve</>
+                                    }
+                                </Button>
+                            )}
+
+                            <div className="w-px h-5 bg-white/10 mx-1 self-center" />
+
+                            <Button
+                                onClick={() => onRemoveUser(req)}
+                                disabled={deleteLoadingId === req.id || actionLoadingId === req.id}
+                                className="bg-red-900/20 hover:bg-red-500/20 text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 transition-all"
+                                size="sm"
+                                title="Permanently remove this user"
+                            >
+                                {deleteLoadingId === req.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <><Trash2 className="w-4 h-4 mr-1.5" /> Remove</>
+                                }
+                            </Button>
+                        </>
+                    )}
+                </div>
+            </div>
+            <div className="mt-2 text-xs text-slate-500">
+                <button
+                    onClick={() => setSelectedClient(req)}
+                    className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2 flex items-center gap-1"
+                >
+                    <FileText className="w-3 h-3" /> View Full Details
+                </button>
+            </div>
+        </motion.div>
+    );
 
     return (
         <div className="min-h-screen bg-[#050510] text-white p-6 sm:p-10 font-sans selection:bg-purple-500/30">
@@ -416,7 +584,7 @@ const AdminDashboard = () => {
                         )}
                     </div>
 
-                    <form onSubmit={handleUpdateCredentials} className="p-6">
+                    <div className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                             {/* New Username / Display Name */}
                             <div className="space-y-2">
@@ -428,6 +596,7 @@ const AdminDashboard = () => {
                                     value={credDisplayName}
                                     onChange={e => setCredDisplayName(e.target.value)}
                                     placeholder={user?.user_metadata?.full_name || 'Display name'}
+                                    autoComplete="off"
                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
                                 />
                                 <p className="text-xs text-slate-500">Your display name in the system</p>
@@ -443,6 +612,7 @@ const AdminDashboard = () => {
                                     value={credEmail}
                                     onChange={e => setCredEmail(e.target.value)}
                                     placeholder={user?.email || 'current@email.com'}
+                                    autoComplete="off"
                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
                                 />
                                 <p className="text-xs text-slate-500">Leave blank to keep current email</p>
@@ -459,6 +629,7 @@ const AdminDashboard = () => {
                                         value={credPassword}
                                         onChange={e => setCredPassword(e.target.value)}
                                         placeholder="Min. 6 characters"
+                                        autoComplete="new-password"
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
                                     />
                                     <button
@@ -482,6 +653,7 @@ const AdminDashboard = () => {
                                     value={credConfirm}
                                     onChange={e => setCredConfirm(e.target.value)}
                                     placeholder="Re-enter new password"
+                                    autoComplete="new-password"
                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
                                 />
                                 {credPassword && credConfirm && credPassword !== credConfirm && (
@@ -510,7 +682,8 @@ const AdminDashboard = () => {
                             </Button>
 
                             <Button
-                                type="submit"
+                                type="button"
+                                onClick={handleUpdateCredentials}
                                 disabled={isUpdatingCreds}
                                 className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
                             >
@@ -521,7 +694,7 @@ const AdminDashboard = () => {
                                 )}
                             </Button>
                         </div>
-                    </form>
+                    </div>
 
                     {/* Admin Account Enable/Disable Toggle */}
                     <div className="border-t border-white/5 p-6">

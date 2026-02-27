@@ -53,7 +53,7 @@ const StatsOverview = ({ requests }) => {
                 <div className="lg:col-span-1 bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[300px]">
                     <h3 className="text-lg font-semibold text-white mb-6 w-full text-left">Status Distribution</h3>
                     <div className="w-full h-[200px] min-h-[200px] min-w-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                             <PieChart>
                                 <Pie
                                     data={data}
@@ -83,7 +83,7 @@ const StatsOverview = ({ requests }) => {
                 <div className="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 min-h-[300px]">
                     <h3 className="text-lg font-semibold text-white mb-6">User Activity</h3>
                     <div className="w-full h-[200px] mt-4 min-h-[200px] min-w-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="99%" height="100%" minWidth={1} minHeight={1}>
                             <BarChart data={barData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" width={80} tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />

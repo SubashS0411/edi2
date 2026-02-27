@@ -4,6 +4,7 @@ import { saveAdminEmail, saveAdminPassword } from '@/lib/settingsService';
 
 // Dynamic admin credentials — controlled via .env (VITE_ADMIN_EMAIL / VITE_ADMIN_DEFAULT_PASSWORD)
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
+const APP_URL = import.meta.env.VITE_APP_URL || 'https://edienviro.com';
 
 const AuthContext = createContext(null);
 
@@ -203,7 +204,6 @@ export const AuthProvider = ({ children }) => {
       email: requestData.email,
       password: requestData.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name: requestData.name,
           transaction_id: requestData.transactionId,
@@ -220,7 +220,8 @@ export const AuthProvider = ({ children }) => {
           company_phone: requestData.phone || '',
           // Use main email as contact email (can be distinct if needed, but simplified here)
           company_email: requestData.companyEmail || requestData.email
-        }
+        },
+        emailRedirectTo: `${APP_URL}/signup`
       }
     });
 
@@ -242,10 +243,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     // 1. Update Supabase Auth (auth.users table — email, password, user_metadata)
-    const { data, error } = await supabase.auth.updateUser(
-      authUpdates,
-      { emailRedirectTo: `${window.location.origin}/admin` }
-    );
+    const { data, error } = await supabase.auth.updateUser(authUpdates, {
+      emailRedirectTo: `${APP_URL}/admin`
+    });
     if (error) return { success: false, error: error.message };
 
     // 2. Sync profiles table — BUT only for display name, NOT email.
@@ -440,7 +440,7 @@ export const AuthProvider = ({ children }) => {
     // Redirect to the Auth page (/signup) so the hash-based error or token
     // is always handled by the Auth component regardless of which route
     // Supabase picks as fallback.
-    const redirectUrl = `${window.location.origin}/signup`;
+    const redirectUrl = `${APP_URL}/signup`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
@@ -479,9 +479,6 @@ export const AuthProvider = ({ children }) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-      }
     });
     if (error) return { success: false, error: error.message };
     return { success: true };
