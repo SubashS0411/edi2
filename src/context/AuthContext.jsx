@@ -433,10 +433,9 @@ export const AuthProvider = ({ children }) => {
   // --- Password Reset / Update ---
 
   const resetPassword = useCallback(async (email) => {
-    // Redirect to the Auth page (/signup) so the hash-based error or token
-    // is always handled by the Auth component regardless of which route
-    // Supabase picks as fallback.
-    const redirectUrl = `${APP_URL}/signup`;
+    // Redirect to /update-password so Auth.jsx's Trigger B detects
+    // the path and automatically shows the "Set New Password" form.
+    const redirectUrl = `${APP_URL}/update-password`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
