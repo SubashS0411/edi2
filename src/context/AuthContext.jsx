@@ -3,7 +3,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { saveAdminEmail, saveAdminPassword } from '@/lib/settingsService';
 
 // Dynamic admin credentials — controlled via .env (VITE_ADMIN_EMAIL / VITE_ADMIN_DEFAULT_PASSWORD)
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'md@edienv.com';
 const APP_URL = import.meta.env.VITE_APP_URL || 'https://edienviro.com';
 
 const AuthContext = createContext(null);

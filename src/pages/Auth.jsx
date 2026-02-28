@@ -9,7 +9,7 @@ import { getRegistrationFee } from '@/lib/settingsService';
 import { supabase } from '@/lib/customSupabaseClient';
 
 // Dynamic admin email — kept in sync with .env so redirect works after credential changes
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'md@edienv.com';
 
 // Subscription Plans Data
 const SUBSCRIPTION_PLANS = [

@@ -11,7 +11,7 @@ import { getRegistrationFee, updateRegistrationFee, getAdminEmail, getAdminPassw
 import { checkAndSendReminders } from '@/lib/emailService';
 
 // Dynamic admin email — read from .env so it stays in sync when credentials are changed
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'md@edienv.com';
 
 // Helper: detect whether a user row belongs to an admin account
 const isAdminUser = (req) => req.role === 'admin' || req.email === ADMIN_EMAIL;

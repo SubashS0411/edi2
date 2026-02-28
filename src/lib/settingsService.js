@@ -53,8 +53,8 @@ const ADMIN_EMAIL_KEY = 'admin_email';
 const ADMIN_PASSWORD_KEY = 'admin_password';
 
 // Build-time fallbacks (used only if DB row has never been seeded)
-const ENV_ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'subashs2573@gmail.com';
-const ENV_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_DEFAULT_PASSWORD || '12345';
+const ENV_ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'md@edienv.com';
+const ENV_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_DEFAULT_PASSWORD || 'Admin@123';
 
 /**
  * Reads the live admin email from app_settings.
