@@ -59,36 +59,6 @@ export const AuthProvider = ({ children }) => {
       password
     });
 
-    // 2. Auto-registration fallback for admin account.
-    //    If the ADMIN_EMAIL doesn't exist yet, auto-create it on first login
-    //    attempt so admins never need to run SQL manually.
-    //    The DB trigger 'on_auth_user_created' will automatically insert
-    //    a profiles row with role = 'admin' from the user_metadata.
-    if (error && email === ADMIN_EMAIL && error.message.includes('Invalid login credentials')) {
-      console.log('Admin account not found — auto-registering...');
-
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { role: 'admin', full_name: 'Master Admin' } }
-      });
-
-      if (signUpError) {
-        return { success: false, error: signUpError.message };
-      }
-
-      if (signUpData?.session) {
-        // Immediate sign-in (email confirmation disabled in Supabase settings)
-        return { success: true, user: signUpData.user, role: 'admin' };
-      } else {
-        // Supabase requires email confirmation before login
-        return {
-          success: false,
-          error: 'Admin account created! Please check your email to confirm, then login again.'
-        };
-      }
-    }
-
     if (error) return { success: false, error: error.message };
 
     // 3. Determine role from profiles table — this is the AUTHORITATIVE source.
