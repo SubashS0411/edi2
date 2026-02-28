@@ -232,43 +232,65 @@ export const AuthProvider = ({ children }) => {
 
   // --- Admin Functions ---
 
-  const updateAdminCredentials = useCallback(async ({ newEmail, newPassword, newDisplayName }) => {
-    const authUpdates = {};
-    if (newEmail) authUpdates.email = newEmail;
-    if (newPassword) authUpdates.password = newPassword;
-    if (newDisplayName) authUpdates.data = { full_name: newDisplayName };
+  const updateAdminCredentials = useCallback(async ({ newEmail, newPassword, newDisplayName, targetUserId }) => {
+    // Determine whose credentials to update:
+    //   - If targetUserId is provided → update that specific user (admin managing others)
+    //   - Otherwise → update the currently logged-in admin
+    const userId = targetUserId || user?.id;
+    if (!userId) return { success: false, error: 'No authenticated user.' };
 
-    if (Object.keys(authUpdates).length === 0) {
+    if (!newEmail && !newPassword && !newDisplayName) {
       return { success: false, error: 'No changes provided.' };
     }
 
-    // 1. Update Supabase Auth (auth.users table — email, password, user_metadata)
-    const { data, error } = await supabase.auth.updateUser(authUpdates, {
-      emailRedirectTo: `${APP_URL}/admin`
-    });
-    if (error) return { success: false, error: error.message };
+    // 1. Call Edge Function (uses service-role key server-side)
+    //    This bypasses the browser autofill / same_password issues entirely.
+    const payload = { userId };
+    if (newEmail) payload.email = newEmail;
+    if (newPassword) payload.password = newPassword;
+    if (newDisplayName) payload.user_metadata = { full_name: newDisplayName };
 
-    // 2. Sync profiles table — BUT only for display name, NOT email.
-    //    Email changes require Supabase confirmation (user clicks email link).
-    //    The DB trigger 'handle_user_updated' on auth.users automatically syncs
-    //    profiles.email AFTER Supabase finalises the email change.
-    //    Writing the new email to profiles now would cause a mismatch.
-    const profileUpdates = {};
-    if (newDisplayName) profileUpdates.full_name = newDisplayName;
+    const { data: fnData, error: fnError } = await supabase.functions.invoke(
+      'update-user-credentials',
+      { body: payload }
+    );
 
-    if (Object.keys(profileUpdates).length > 0 && data.user) {
+    // supabase.functions.invoke returns { data, error }
+    // data is the parsed JSON body from our Edge Function
+    if (fnError) {
+      return { success: false, error: fnError.message || 'Edge Function call failed.' };
+    }
+
+    // The Edge Function returns { success, error?, user? }
+    if (!fnData?.success) {
+      return { success: false, error: fnData?.error || 'Unknown Edge Function error.' };
+    }
+
+    // 2. Sync profiles table for display name
+    if (newDisplayName) {
       const { error: profileError } = await supabase
         .from('profiles')
-        .update(profileUpdates)
-        .eq('id', data.user.id);
+        .update({ full_name: newDisplayName })
+        .eq('id', userId);
 
       if (profileError) {
         console.warn('Auth updated but profiles sync failed:', profileError.message);
       }
     }
 
-    // 3. Persist new credentials to app_settings so the dashboard always
-    //    shows the live values without relying on build-time .env variables.
+    // 3. Sync email in profiles if changed (admin API changes it instantly, no confirmation)
+    if (newEmail) {
+      const { error: emailSyncError } = await supabase
+        .from('profiles')
+        .update({ email: newEmail })
+        .eq('id', userId);
+
+      if (emailSyncError) {
+        console.warn('Auth email updated but profiles.email sync failed:', emailSyncError.message);
+      }
+    }
+
+    // 4. Persist new credentials to app_settings
     const settingsSaves = [];
     if (newEmail) settingsSaves.push(saveAdminEmail(newEmail));
     if (newPassword) settingsSaves.push(saveAdminPassword(newPassword));
@@ -280,19 +302,19 @@ export const AuthProvider = ({ children }) => {
         console.warn('Auth updated but app_settings sync failed:', failed.error);
         return {
           success: true,
-          user: data.user,
-          warning: `Credentials changed in Auth but could not persist to settings table: ${failed.error}`,
+          user: fnData.user,
+          warning: `Credentials changed but could not persist to settings table: ${failed.error}`,
         };
       }
     }
 
-    // 4. Flag whether email change is pending confirmation
     return {
       success: true,
-      user: data.user,
-      emailPending: !!newEmail,
+      user: fnData.user,
+      // Admin API changes email instantly — no confirmation email needed
+      emailPending: false,
     };
-  }, []);
+  }, [user]);
 
   // --- Fetch Admin Profile from DB (for verification) ---
   const getAdminProfile = useCallback(async () => {
@@ -422,13 +444,17 @@ export const AuthProvider = ({ children }) => {
       };
     }
 
-    // 2. Attempt to remove the auth record via admin API.
-    //    Works when the Supabase client uses the service-role key.
-    //    Silently skipped with the anon key — profile deletion is sufficient.
-    try {
-      await supabase.auth.admin.deleteUser(userId);
-    } catch (_) {
-      // Not fatal — profile already deleted, access is revoked.
+    // 2. Remove auth record via Edge Function (uses service-role key)
+    const { data: fnData, error: fnError } = await supabase.functions.invoke(
+      'update-user-credentials',
+      { body: { userId, action: 'delete' } }
+    );
+
+    if (fnError) {
+      console.warn('Profile deleted but auth cleanup via Edge Function failed:', fnError.message);
+      // Not fatal — profile is already deleted, user can't access anything
+    } else if (fnData && !fnData.success) {
+      console.warn('Profile deleted but auth cleanup returned error:', fnData.error);
     }
 
     return { success: true };
